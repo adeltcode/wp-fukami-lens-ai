@@ -51,12 +51,23 @@ function npa_check_grammar_callback() {
 
     if (!$api_key) wp_send_json_error('API key missing');
 
+    // Remove all <img ...> tags from the content
+    $content = preg_replace('/<img[^>]*>/i', '', $content);
+
+    // --- Measure time ---
+    $start_time = microtime(true);
+
     // Call OpenAI API
     $response = npa_call_openai_api($content, $api_key, $model);
+
+    $end_time = microtime(true);
+    $time_spent = $end_time - $start_time;
 
     if (is_wp_error($response)) {
         wp_send_json_error($response->get_error_message());
     } else {
+        // Add time spent to response
+        $response['time_spent'] = $time_spent;
         wp_send_json_success($response);
     }
 }
@@ -74,9 +85,17 @@ function npa_call_openai_api($content, $api_key, $model) {
             'Authorization' => 'Bearer ' . $api_key,
             'Content-Type'  => 'application/json'
         ],
-        'body' => wp_json_encode($body)
+        'body' => wp_json_encode($body),
+        'timeout' => 60
     ]);
     if (is_wp_error($response)) return $response;
     $data = json_decode(wp_remote_retrieve_body($response), true);
-    return $data['choices'][0]['message']['content'] ?? 'No suggestions found.';
+
+    // Prepare result
+    return [
+        'result' => $data['choices'][0]['message']['content'] ?? 'No suggestions found.',
+        'prompt_tokens' => $data['usage']['prompt_tokens'] ?? 0,
+        'completion_tokens' => $data['usage']['completion_tokens'] ?? 0,
+        'total_tokens' => $data['usage']['total_tokens'] ?? 0,
+    ];
 }
