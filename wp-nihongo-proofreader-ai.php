@@ -76,8 +76,14 @@ function npa_call_openai_api($content, $api_key, $model) {
     $body = [
         'model' => $model,
         'messages' => [
-            ['role' => 'system', 'content' => 'You are a grammar and spelling checker for Japanese text.'],
-            ['role' => 'user', 'content' => "Check this Japanese text for grammar and spelling errors. Suggest corrections:\n\n" . $content]
+            [
+                'role' => 'system',
+                'content' => 'あなたは日本語のスペルと文法の校正者です。まずスペルミスを優先的に指摘し修正案を出し、その後に文法ミスを指摘し修正案を出してください。'
+            ],
+            [
+                'role' => 'user',
+                'content' => "以下の日本語テキストについて、まずスペルミスを指摘し修正案を提示し、その後に文法ミスを指摘し修正案を提示してください。\n\n" . $content
+            ]
         ]
     ];
     $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
