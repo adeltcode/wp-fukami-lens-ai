@@ -1,6 +1,15 @@
 #npa-grammar-results {
-    margin-bottom: 10px;
-    background: #f9f9f9;
-    padding: 10px;
+    overflow-y: auto;
+    word-break: break-all;   /* Break long words/strings */
+    white-space: pre-wrap;   /* Preserve line breaks and wrap text */
+    padding: 8px;
     border: 1px solid #ddd;
+    background: #fafafa;
+    margin-bottom: 10px;
+}
+
+.npa-loading {
+    display: inline-block;
+    padding-left: 24px;
+    background: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 100 100" fill="gray" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="35" stroke="gray" stroke-width="10" fill="none" stroke-dasharray="164.93361431346415 56.97787143782138"><animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" values="0 50 50;360 50 50" keyTimes="0;1"/></circle></svg>') left center no-repeat;
 }

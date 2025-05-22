@@ -46,19 +46,27 @@ function npa_check_grammar_callback() {
     if (!current_user_can('edit_posts')) wp_send_json_error('Unauthorized');
 
     $content = wp_unslash($_POST['content'] ?? '');
+    $title   = wp_unslash($_POST['title'] ?? ''); // Get the title from AJAX
     $api_key = get_option('npa_openai_api_key', '');
     $model   = get_option('npa_gpt_model', 'gpt-3.5-turbo');
+    $system_role_prompt = get_option(
+        'npa_system_role_prompt',
+        'あなたは日本語のスペルと文法の校正者です。まずスペルミスを優先的に指摘し修正案を出し、その後に文法ミスを指摘し修正案を出してください。'
+    );
 
     if (!$api_key) wp_send_json_error('API key missing');
 
     // Remove all <img ...> tags from the content
     $content = preg_replace('/<img[^>]*>/i', '', $content);
 
+    // Combine title and content
+    $full_content = "タイトル: {$title}\n\n本文:\n{$content}";
+
     // --- Measure time ---
     $start_time = microtime(true);
 
     // Call OpenAI API
-    $response = npa_call_openai_api($content, $api_key, $model);
+    $response = npa_call_openai_api($full_content, $api_key, $model, $system_role_prompt);
 
     $end_time = microtime(true);
     $time_spent = $end_time - $start_time;
@@ -72,13 +80,14 @@ function npa_check_grammar_callback() {
     }
 }
 
-function npa_call_openai_api($content, $api_key, $model) {
+// Update function signature to accept $system_role_prompt
+function npa_call_openai_api($content, $api_key, $model, $system_role_prompt) {
     $body = [
         'model' => $model,
         'messages' => [
             [
                 'role' => 'system',
-                'content' => 'あなたは日本語のスペルと文法の校正者です。まずスペルミスを優先的に指摘し修正案を出し、その後に文法ミスを指摘し修正案を出してください。'
+                'content' => $system_role_prompt
             ],
             [
                 'role' => 'user',
@@ -92,7 +101,7 @@ function npa_call_openai_api($content, $api_key, $model) {
             'Content-Type'  => 'application/json'
         ],
         'body' => wp_json_encode($body),
-        'timeout' => 60
+        'timeout' => 90
     ]);
     if (is_wp_error($response)) return $response;
     $data = json_decode(wp_remote_retrieve_body($response), true);

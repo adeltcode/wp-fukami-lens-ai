@@ -1,24 +1,34 @@
 jQuery(document).ready(function($) {
     $('#npa-check-btn').on('click', function() {
+        var $btn = $(this);
+        var $results = $('#npa-grammar-results');
         var content = $('#content').val();
-        $('#npa-grammar-results').html('校正中...');
-        $.post(npa_ajax.ajax_url, {
-            action: 'npa_check_grammar',
-            nonce: npa_ajax.nonce,
-            content: content
-        }, function(response) {
-            if (response.success) {
-                var data = response.data;
-                var html = '<pre>' + data.result + '</pre>';
-                html += '<div style="margin-top:10px;font-size:90%;">';
-                html += '送信トークン: ' + data.prompt_tokens + '　';
-                html += '受信トークン: ' + data.completion_tokens + '　';
-                html += '合計: ' + data.total_tokens + '　';
-                html += '所要時間: ' + (data.time_spent ? data.time_spent.toFixed(2) : '?') + '秒';
-                html += '</div>';
-                $('#npa-grammar-results').html(html);
-            } else {
-                $('#npa-grammar-results').html('<span style="color:red;">' + response.data + '</span>');
+        var title = $('#title').val();
+
+        // Show loading indicator and disable button
+        $results.html('<span class="npa-loading">校正中... しばらくお待ちください。</span>');
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: npa_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'npa_check_grammar',
+                content: content,
+                title: title,
+                nonce: npa_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    $results.html('<div>' + response.data.result.replace(/\n/g, '<br>') + '</div>');
+                } else {
+                    $results.html('<span style="color:red;">' + response.data + '</span>');
+                }
+                $btn.prop('disabled', false);
+            },
+            error: function() {
+                $results.html('<span style="color:red;">エラーが発生しました。</span>');
+                $btn.prop('disabled', false);
             }
         });
     });

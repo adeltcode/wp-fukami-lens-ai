@@ -25,6 +25,9 @@ add_action('admin_init', function() {
     register_setting('npa_settings_group', 'npa_gpt_model', [
         'sanitize_callback' => 'sanitize_text_field'
     ]);
+    register_setting('npa_settings_group', 'npa_system_role_prompt', [
+        'sanitize_callback' => 'sanitize_textarea_field'
+    ]);
     add_settings_section('npa_main_section', '', null, 'npa-settings');
     add_settings_field('npa_openai_api_key', 'OpenAI API Key', function() {
         $value = esc_attr(get_option('npa_openai_api_key', ''));
@@ -42,4 +45,14 @@ add_action('admin_init', function() {
         </select>
         <?php
     }, 'npa-settings', 'npa_main_section');
+    add_settings_field(
+        'npa_system_role_prompt',
+        'System Role Prompt',
+        function() {
+            $value = esc_textarea(get_option('npa_system_role_prompt', 'あなたは日本語のスペルと文法の校正者です。まずスペルミスを優先的に指摘し修正案を出し、その後に文法ミスを指摘し修正案を出してください。'));
+            echo "<textarea name='npa_system_role_prompt' rows='20' cols='100'>$value</textarea>";
+        },
+        'npa-settings',
+        'npa_main_section'
+    );
 });
