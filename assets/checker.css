@@ -13,3 +13,12 @@
     padding-left: 24px;
     background: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 100 100" fill="gray" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="35" stroke="gray" stroke-width="10" fill="none" stroke-dasharray="164.93361431346415 56.97787143782138"><animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" values="0 50 50;360 50 50" keyTimes="0;1"/></circle></svg>') left center no-repeat;
 }
+
+.npa-settings-link {
+    text-decoration: none;
+}
+
+#npa-check-btn-container {
+    display: flex;
+    align-items: center;
+}
