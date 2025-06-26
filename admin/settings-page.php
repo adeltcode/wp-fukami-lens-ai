@@ -162,39 +162,8 @@ function npa_settings_page() {
  * Render the Python code runner page.
  */
 function npa_run_python_page() {
-    $output = '';
-    $error = '';
-    $code = '';
-    if (isset($_POST['npa_python_code'])) {
-        $code = stripslashes($_POST['npa_python_code']);
-        // Basic sanitization: disallow dangerous functions (for demo, not secure for production)
-        if (stripos($code, 'import os') !== false || stripos($code, 'import sys') !== false || stripos($code, 'open(') !== false) {
-            $error = esc_html__('Use of certain functions is not allowed for security reasons.', 'wp-nihongo-proofreader-ai');
-        } else {
-            $tmpfile = tempnam(sys_get_temp_dir(), 'npa_py_');
-            file_put_contents($tmpfile, $code);
-
-            // invoke python3 from its installed path, capture stderr
-            $cmd    = '/usr/bin/python3 ' . escapeshellarg($tmpfile) . ' 2>&1';
-            $output = shell_exec($cmd);
-
-            unlink($tmpfile);
-        }
-    }
-    ?>
-    <div class="wrap">
-        <h1><?php esc_html_e('Run Python Code', 'wp-nihongo-proofreader-ai'); ?></h1>
-        <form method="post">
-            <textarea name="npa_python_code" rows="10" cols="100" placeholder="<?php esc_attr_e("print('Hello from Python!')", 'wp-nihongo-proofreader-ai'); ?>"><?php echo esc_textarea($code); ?></textarea><br>
-            <input type="submit" class="button button-primary" value="<?php esc_attr_e('Run Python Code', 'wp-nihongo-proofreader-ai'); ?>">
-        </form>
-        <?php if ($error): ?>
-            <div style="color:red;"><strong><?php esc_html_e('Error:', 'wp-nihongo-proofreader-ai'); ?></strong> <?php echo esc_html($error); ?></div>
-        <?php elseif ($output): ?>
-            <div style="margin-top:16px;"><strong><?php esc_html_e('Output:', 'wp-nihongo-proofreader-ai'); ?></strong><pre><?php echo esc_html($output); ?></pre></div>
-        <?php endif; ?>
-    </div>
-    <?php
+    require_once plugin_dir_path(__FILE__) . '../python/runner.php';
+    npa_python_runner_page();
 }
 
 add_action('admin_init', function() {
