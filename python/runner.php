@@ -37,7 +37,7 @@ if (!function_exists('npa_python_runner_page')) {
             <hr>
             <form method="post">
                 <input type="hidden" name="npa_run_wp_posts_to_markdown" value="1">
-                <input type="submit" class="button" value="<?php esc_attr_e('Show Last Week\'s Posts as Markdown', 'wp-nihongo-proofreader-ai'); ?>">
+                <input type="submit" class="button" value="<?php esc_attr_e('Show Last 10 Posts as Markdown and chuncked', 'wp-nihongo-proofreader-ai'); ?>">
             </form>
             <?php
             if (isset($_POST['npa_run_wp_posts_to_markdown'])) {

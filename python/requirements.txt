@@ -1,4 +1,5 @@
 docling
 requests
 # docling (if available on PyPI, otherwise use markdownify as a fallback)
-markdownify 
+markdownify
+tiktoken 

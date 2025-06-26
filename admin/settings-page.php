@@ -264,8 +264,8 @@ add_action('admin_init', function() {
     }, 'npa-rag-settings', 'npa_rag_section');
     add_settings_field('npa_rag_max_tokens', 'RAG Max Tokens', function() {
         $value = esc_attr(get_option('npa_rag_max_tokens', 1000));
-        echo "<input type='number' step='1' min='1' max='10000' name='npa_rag_max_tokens' value='$value' />";
-        echo "<p class='description'>Max tokens for the RAG AI response. Min: 1, Max: 10000.</p>";
+        echo "<input type='number' step='1' min='1' max='8191' name='npa_rag_max_tokens' value='$value' />";
+        echo "<p class='description'>Max tokens for the RAG AI response. Min: 1, Max: 8191.</p>";
     }, 'npa-rag-settings', 'npa_rag_section');
     add_settings_field(
         'npa_dashboard_system_prompt',
