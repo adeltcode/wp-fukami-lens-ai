@@ -102,7 +102,6 @@ if ( ! class_exists( 'NPA_Core' ) ) {
             // Get settings
             $provider = get_option('npa_ai_provider', 'openai');
             $use_rag = get_option('npa_rag_enabled', '0') === '1';
-            $rag_source = get_option('npa_rag_data_source', '');
             $rag_context_window = intval(get_option('npa_rag_context_window', 2048));
             $system_prompt = get_option('npa_system_role_prompt', '');
             $dashboard_prompt = get_option('npa_dashboard_system_prompt', '');

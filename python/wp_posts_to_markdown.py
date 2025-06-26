@@ -17,6 +17,8 @@ import sys
 import json
 import tempfile
 import os
+import pprint
+from utils.tokenizer import OpenAITokenizerWrapper
 
 # Try to import docling HybridChunker and DocumentConverter
 try:
@@ -85,7 +87,6 @@ def main():
     for post in posts:
         title = post.get('title', {}).get('rendered', '')
         date = post.get('date', '')
-        author = post.get('_embedded', {}).get('author', [{}])[0].get('name', 'Unknown')
         content_html = post.get('content', {}).get('rendered', '')
         permalink = post.get('permalink', '')
         post_id = post.get('ID', '')
@@ -98,7 +99,6 @@ def main():
             f'id: {post_id}',
             f'title: "{yaml_escape(title)}"',
             f'date: "{date}"',
-            f'author: "{yaml_escape(author)}"',
             f'permalink: "{permalink}"',
             "categories:",
         ] + [f'  - "{yaml_escape(cat)}"' for cat in categories] + [
@@ -116,9 +116,12 @@ def main():
     # Output: separate each post with a clear delimiter for chunking
     markdown = '\n\n---\n\n'.join(all_md)
 
-    # Get max_tokens from environment or default
-    max_tokens = int(os.environ.get("NPA_RAG_MAX_TOKENS", 8191))
-    model = os.environ.get("NPA_RAG_MODEL", "gpt-3.5-turbo")
+    # Get max_input_tokens from environment or default
+    max_input_tokens = int(os.environ.get("NPA_RAG_MAX_INPUT_TOKENS", 1000))
+    embeddings_model = os.environ.get("NPA_RAG_EMBEDDINGS_MODEL", "text-embedding-3-small")
+
+    print(f"[DEBUG] max_input_tokens = {max_input_tokens}")
+    print(f"[DEBUG] embeddings_model = {embeddings_model}")
 
     if DOCLING_AVAILABLE:
         # Use docling DocumentConverter and HybridChunker for chunking
@@ -128,30 +131,36 @@ def main():
             tmp_md_path = tmp_md.name
         try:
             doc = DocumentConverter().convert(source=tmp_md_path).document
-            chunker = HybridChunker()
+            # Load our custom tokenizer for OpenAI
+            tokenizer = OpenAITokenizerWrapper()
+            print(f"[DEBUG] Using tokenizer: OpenAITokenizerWrapper (OpenAI tiktoken compatible)")
+            chunker = HybridChunker(
+                tokenizer=tokenizer,
+                max_tokens=max_input_tokens, 
+                merge_peers=True,
+            )
             chunk_iter = chunker.chunk(dl_doc=doc)
-            for i, chunk in enumerate(chunk_iter):
-                text = chunk.text
-                # Try to get token count using tiktoken if possible
-                try:
-                    enc = tiktoken.encoding_for_model(model)
-                    token_count = len(enc.encode(text))
-                except Exception:
-                    token_count = 'N/A'
-                print(f"\n\n--- chunk {i+1} (tokens: {token_count}) ---\n\n")
-                print(text)
+
+            chunks = list(chunk_iter)
+
+            for i, chunk in enumerate(chunks, 1):
+                token_count = len(tokenizer.tokenizer.encode(chunk.text))
+                print(f"\n\n--- chunk {i} (tokens: {token_count}) ---\n\n")
+                print(chunk.text)
+                
         finally:
             os.unlink(tmp_md_path)
     else:
+        print(f"[DEBUG] Using tokenizer: tiktoken (fallback, no docling)")
         # Fallback: use tiktoken-based chunking as before
-        enc = tiktoken.encoding_for_model(model)
+        enc = tiktoken.encoding_for_model(embeddings_model)
         lines = markdown.splitlines(keepends=True)
         chunks = []
         current_chunk = ""
         current_tokens = 0
         for line in lines:
             line_tokens = len(enc.encode(line))
-            if current_tokens + line_tokens > max_tokens and current_chunk:
+            if current_tokens + line_tokens > max_input_tokens and current_chunk:
                 chunks.append(current_chunk)
                 current_chunk = line
                 current_tokens = line_tokens

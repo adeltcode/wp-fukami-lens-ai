@@ -43,7 +43,7 @@ if (!function_exists('npa_python_runner_page')) {
             if (isset($_POST['npa_run_wp_posts_to_markdown'])) {
                 // --- Retrieve latest 10 posts and pass to Python ---
                 $args = [
-                    'numberposts' => 10,
+                    'numberposts' => 5,
                     'post_status' => 'publish',
                     'orderby'     => 'date',
                     'order'       => 'DESC',
@@ -51,7 +51,6 @@ if (!function_exists('npa_python_runner_page')) {
                 $posts = get_posts($args);
                 $data = [];
                 foreach ($posts as $post) {
-                    $author = get_userdata($post->post_author);
                     $categories = get_the_category($post->ID);
                     $category_names = array_map(function($cat) { return $cat->name; }, $categories);
                     $tags = get_the_tags($post->ID);
@@ -64,27 +63,23 @@ if (!function_exists('npa_python_runner_page')) {
                         'permalink'=> get_permalink($post->ID),
                         'categories' => $category_names,
                         'tags' => $tag_names,
-                        '_embedded' => [
-                            'author' => [
-                                ['name' => $author ? $author->display_name : 'Unknown']
-                            ]
-                        ]
                     ];
                 }
-                // Write to a temp file
-                $tmpfile = tempnam(sys_get_temp_dir(), 'npa_posts_');
-                file_put_contents($tmpfile, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-
-                // Debug: Output the contents of the temp file before calling Python
-                echo '<div style="margin-top:16px;"><strong>Temp JSON file contents:</strong><pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:8px; max-height:400px; overflow:auto;">' . esc_html(file_get_contents($tmpfile)) . '</pre></div>';
-
-                // Call the Python script with the temp file as argument
                 $python_script = __DIR__ . '/wp_posts_to_markdown.py';
-
-                $cmd = escapeshellcmd("/usr/bin/python3 ") . escapeshellarg($python_script) . ' ' . escapeshellarg($tmpfile) . ' 2>&1';
-                $md_output = shell_exec($cmd);
-                unlink($tmpfile);
-                echo '<div style="margin-top:16px;"><strong>' . esc_html__('Markdown Output:', 'wp-nihongo-proofreader-ai') . '</strong><pre style="white-space:pre-wrap;">' . esc_html($md_output) . '</pre></div>';
+                $max_input_tokens = intval(get_option('npa_rag_max_input_tokens', 8191));
+                $rag_embeddings_model = get_option('npa_rag_embeddings_model', 'gpt-3.5-turbo');
+                $all_md_output = '';
+                foreach ($data as $post) {
+                    $tmpfile = tempnam(sys_get_temp_dir(), 'npa_post_');
+                    file_put_contents($tmpfile, json_encode([$post], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                    // Debug: Output the contents of the temp file before calling Python
+                    // echo '<div style="margin-top:16px;"><strong>Temp JSON file for Post ID ' . esc_html($post['ID']) . ':</strong><pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:8px; max-height:400px; overflow:auto;">' . esc_html(file_get_contents($tmpfile)) . '</pre></div>';
+                    $cmd = 'NPA_RAG_MAX_INPUT_TOKENS=' . escapeshellarg($max_input_tokens) . ' NPA_RAG_EMBEDDINGS_MODEL=' . escapeshellarg($rag_embeddings_model) . ' ' . escapeshellcmd('/usr/bin/python3') . ' ' . escapeshellarg($python_script) . ' ' . escapeshellarg($tmpfile) . ' 2>&1';
+                    $md_output = shell_exec($cmd);
+                    unlink($tmpfile);
+                    $all_md_output .= $md_output . "\n\n";
+                }
+                echo '<div style="margin-top:16px;"><strong>' . esc_html__('Markdown Output:', 'wp-nihongo-proofreader-ai') . '</strong><pre style="white-space:pre-wrap;">' . esc_html($all_md_output) . '</pre></div>';
             }
             ?>
             <?php if ($error): ?>

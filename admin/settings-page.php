@@ -194,7 +194,10 @@ add_action('admin_init', function() {
     register_setting('npa_settings_group', 'npa_rag_temperature', [
         'sanitize_callback' => 'sanitize_text_field'
     ]);
-    register_setting('npa_settings_group', 'npa_rag_max_tokens', [
+    register_setting('npa_settings_group', 'npa_rag_max_input_tokens', [
+        'sanitize_callback' => 'sanitize_text_field'
+    ]);
+    register_setting('npa_settings_group', 'npa_rag_embeddings_model', [
         'sanitize_callback' => 'sanitize_text_field'
     ]);
 
@@ -247,11 +250,6 @@ add_action('admin_init', function() {
         $value = esc_attr(get_option('npa_rag_enabled', '0'));
         echo "<input type='checkbox' name='npa_rag_enabled' value='1' " . checked($value, '1', false) . " /> Enable Retrieval-Augmented Generation (RAG) features.";
     }, 'npa-rag-settings', 'npa_rag_section');
-    add_settings_field('npa_rag_data_source', 'RAG Data Source URL', function() {
-        $value = esc_attr(get_option('npa_rag_data_source', ''));
-        echo "<input type='text' name='npa_rag_data_source' value='$value' size='60' />";
-        echo "<p class='description'>Data source URL for RAG context retrieval.</p>";
-    }, 'npa-rag-settings', 'npa_rag_section');
     add_settings_field('npa_rag_context_window', 'RAG Context Window Size', function() {
         $value = esc_attr(get_option('npa_rag_context_window', 2048));
         echo "<input type='number' name='npa_rag_context_window' value='$value' min='1' max='10000' />";
@@ -262,10 +260,15 @@ add_action('admin_init', function() {
         echo "<input type='number' step='0.01' min='0' max='2' name='npa_rag_temperature' value='$value' />";
         echo "<p class='description'>Temperature for the RAG AI model (randomness). Min: 0, Max: 2.</p>";
     }, 'npa-rag-settings', 'npa_rag_section');
-    add_settings_field('npa_rag_max_tokens', 'RAG Max Tokens', function() {
-        $value = esc_attr(get_option('npa_rag_max_tokens', 1000));
-        echo "<input type='number' step='1' min='1' max='8191' name='npa_rag_max_tokens' value='$value' />";
-        echo "<p class='description'>Max tokens for the RAG AI response. Min: 1, Max: 8191.</p>";
+    add_settings_field('npa_rag_max_input_tokens', 'RAG Max Input Tokens', function() {
+        $value = esc_attr(get_option('npa_rag_max_input_tokens', 1000));
+        echo "<input type='number' step='1' min='1' max='8191' name='npa_rag_max_input_tokens' value='$value' />";
+        echo "<p class='description'>Maximum number of input tokens per chunk for RAG AI APIs. This controls the maximum size of each chunk sent to the model. Min: 1, Max: 8191.</p>";
+    }, 'npa-rag-settings', 'npa_rag_section');
+    add_settings_field('npa_rag_embeddings_model', 'RAG Embeddings Model', function() {
+        $value = esc_attr(get_option('npa_rag_embeddings_model', 'text-embedding-3-small'));
+        echo "<input type='text' name='npa_rag_embeddings_model' value='$value' size='32' />";
+        echo "<p class='description'>Model name to use for RAG chunking and tokenization (e.g., text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002, etc.).</p>";
     }, 'npa-rag-settings', 'npa_rag_section');
     add_settings_field(
         'npa_dashboard_system_prompt',
