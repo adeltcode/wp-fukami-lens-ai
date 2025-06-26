@@ -52,10 +52,18 @@ if (!function_exists('npa_python_runner_page')) {
                 $data = [];
                 foreach ($posts as $post) {
                     $author = get_userdata($post->post_author);
+                    $categories = get_the_category($post->ID);
+                    $category_names = array_map(function($cat) { return $cat->name; }, $categories);
+                    $tags = get_the_tags($post->ID);
+                    $tag_names = $tags ? array_map(function($tag) { return $tag->name; }, $tags) : [];
                     $data[] = [
-                        'title'   => ['rendered' => get_the_title($post)],
-                        'date'    => $post->post_date,
-                        'content' => ['rendered' => apply_filters('the_content', $post->post_content)],
+                        'ID'       => $post->ID,
+                        'title'    => ['rendered' => get_the_title($post)],
+                        'date'     => $post->post_date,
+                        'content'  => ['rendered' => apply_filters('the_content', $post->post_content)],
+                        'permalink'=> get_permalink($post->ID),
+                        'categories' => $category_names,
+                        'tags' => $tag_names,
                         '_embedded' => [
                             'author' => [
                                 ['name' => $author ? $author->display_name : 'Unknown']

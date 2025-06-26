@@ -1,11 +1,11 @@
 """
 wp_posts_to_markdown.py
 ----------------------
-Converts a list of WordPress posts (in JSON format) to Markdown.
+Converts a list of WordPress posts (in JSON format) to Markdown with YAML front matter for chunking/embedding.
 
-- Expects a JSON file (matching WP REST API structure) as the first argument (from PHP/WordPress), or defaults to 'posts.json'.
+- Expects a JSON file as the first argument (from PHP/WordPress), or defaults to 'posts.json'.
 - Uses docling (preferred) or markdownify (fallback) to convert HTML post content to Markdown.
-- Outputs concatenated Markdown for all posts to stdout.
+- Outputs one Markdown document per post, separated by a clear delimiter.
 
 Usage:
     python3 wp_posts_to_markdown.py /path/to/posts.json
@@ -44,6 +44,12 @@ def html_to_markdown(html):
         except ImportError:
             return "[ERROR: Neither docling nor markdownify is available]"
 
+def yaml_escape(s):
+    """Escape double quotes and backslashes for YAML."""
+    if not isinstance(s, str):
+        return s
+    return s.replace('\\', '\\\\').replace('"', '\\"')
+
 # --- Main Script Logic ---
 def main():
     """
@@ -74,12 +80,33 @@ def main():
         date = post.get('date', '')
         author = post.get('_embedded', {}).get('author', [{}])[0].get('name', 'Unknown')
         content_html = post.get('content', {}).get('rendered', '')
-        md = f'# {title}\n\n'
-        md += f'*Date:* {date}\n\n*Author:* {author}\n\n'
-        md += html_to_markdown(content_html)
-        all_md.append(md)
+        permalink = post.get('permalink', '')
+        post_id = post.get('ID', '')
+        categories = post.get('categories', [])
+        tags = post.get('tags', [])
 
-    # Output concatenated Markdown
+        # YAML front matter
+        yaml_lines = [
+            "---",
+            f'id: {post_id}',
+            f'title: "{yaml_escape(title)}"',
+            f'date: "{date}"',
+            f'author: "{yaml_escape(author)}"',
+            f'permalink: "{permalink}"',
+            "categories:",
+        ] + [f'  - "{yaml_escape(cat)}"' for cat in categories] + [
+            "tags:",
+        ] + [f'  - "{yaml_escape(tag)}"' for tag in tags] + [
+            "---",
+            "",
+        ]
+
+        # Markdown content
+        md = f'# {title}\n\n'
+        md += html_to_markdown(content_html)
+        all_md.append('\n'.join(yaml_lines) + md)
+
+    # Output: separate each post with a clear delimiter for chunking
     print('\n\n---\n\n'.join(all_md))
 
 if __name__ == '__main__':
