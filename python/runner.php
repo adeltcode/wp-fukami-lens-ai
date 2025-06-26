@@ -65,7 +65,7 @@ if (!function_exists('npa_python_runner_page')) {
                         'tags' => $tag_names,
                     ];
                 }
-                $python_script = __DIR__ . '/wp_posts_to_markdown.py';
+                $python_script = __DIR__ . '/main.py';
                 $max_input_tokens = intval(get_option('npa_rag_max_input_tokens', 8191));
                 $rag_embeddings_model = get_option('npa_rag_embeddings_model', 'gpt-3.5-turbo');
                 $all_md_output = '';

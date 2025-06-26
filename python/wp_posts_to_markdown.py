@@ -32,7 +32,6 @@ import tiktoken
 
 os.environ["HF_HOME"] = "/tmp"
 os.environ["HF_HUB_CACHE"] = "/tmp/huggingface"
-os.environ["TRANSFORMERS_CACHE"] = "/tmp/huggingface"
 os.environ["XDG_CACHE_HOME"] = "/tmp"
 
 def html_to_markdown(html):
