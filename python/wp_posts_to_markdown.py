@@ -92,6 +92,19 @@ def main():
         categories = post.get('categories', [])
         tags = post.get('tags', [])
 
+        # --- Add canonical link to HTML content for Docling provenance ---
+        if '<head>' in content_html:
+            content_html = content_html.replace(
+                '<head>',
+                f'<head>\n<link rel="canonical" href="{permalink}">',
+                1
+            )
+        else:
+            # If no <head>, prepend it
+            content_html = (
+                f'<head><link rel="canonical" href="{permalink}"></head>\n' + content_html
+            )
+
         # YAML front matter
         yaml_lines = [
             "---",
@@ -129,7 +142,15 @@ def main():
             tmp_md.flush()
             tmp_md_path = tmp_md.name
         try:
-            doc = DocumentConverter().convert(source=tmp_md_path).document
+            doc_conv = DocumentConverter().convert(source=tmp_md_path)
+            doc = doc_conv.document
+            # --- Set doc.origin.uri to permalink if possible ---
+            if hasattr(doc, 'origin') and hasattr(doc.origin, 'uri'):
+                # Try to extract the permalink from the YAML front matter (first post)
+                import re
+                m = re.search(r'permalink: "([^"]+)"', markdown)
+                if m:
+                    doc.origin.uri = m.group(1)
             # Load our custom tokenizer for OpenAI
             tokenizer = OpenAITokenizerWrapper()
             print(f"[DEBUG] Using tokenizer: OpenAITokenizerWrapper (OpenAI tiktoken compatible)")

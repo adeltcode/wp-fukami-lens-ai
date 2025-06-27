@@ -26,8 +26,10 @@ def main():
             from docling.document_converter import DocumentConverter
             from docling.chunking import HybridChunker
 
-            doc = DocumentConverter().convert(source=tmp_html_path).document
+            doc_conv = DocumentConverter().convert(source=tmp_html_path)
+            doc = doc_conv.document
 
+            print(f"<br><pre>{doc}</pre>")
             # Output Docling document as JSON for debugging
             # try:
             #     doc_json = doc.export_to_dict() if hasattr(doc, 'export_to_dict') else (doc.to_dict() if hasattr(doc, 'to_dict') else None)
@@ -54,6 +56,7 @@ def main():
                 ser_txt = chunker.contextualize(chunk=chunk)
                 ser_tokens = len(tokenizer.tokenizer.encode(ser_txt))
                 print(f"chunker.contextualize(chunk) ({ser_tokens} tokens):\n{repr(ser_txt)}")
+
         except ImportError:
             print("[Docling not available: using tiktoken fallback chunking]")
             try:

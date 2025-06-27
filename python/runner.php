@@ -56,35 +56,51 @@ if (!function_exists('fukami_lens_python_runner_page')) {
                     $category_names = array_map(function($cat) { return $cat->name; }, $categories);
                     $tags = get_the_tags($post->ID);
                     $tag_names = $tags ? array_map(function($tag) { return $tag->name; }, $tags) : [];
+                    $permalink = get_permalink($post->ID);
 
-                    // Build semantic HTML for the post
-                    $html = '<article itemscope itemtype="http://schema.org/Article">';
+                    // Build semantic HTML for the post (fully semantic)
+                    $title = esc_html(get_the_title($post));
+                    $date = esc_html($post->post_date);
+                    $canonical_tag = '<link rel="canonical" href="' . $permalink . '">';
+                    $meta_charset = '<meta charset="utf-8">';
+
+                    $html = '<!DOCTYPE html>';
+                    $html .= '<html lang="ja">';
+                    $html .= '<head>' . $meta_charset . $canonical_tag . '<title>' . $title . '</title></head>';
+                    $html .= '<body>';
                     $html .= '<header>';
-                    $html .= '<h1 itemprop="headline">' . esc_html(get_the_title($post)) . '</h1>';
-                    $html .= '<time itemprop="datePublished" datetime="' . esc_attr($post->post_date) . '">' . esc_html($post->post_date) . '</time>';
+                    $html .= '<h1 itemprop="headline">' . $title . '</h1>';
+                    $html .= '<time itemprop="datePublished" datetime="' . $date . '">' . $date . '</time>';
                     $html .= '</header>';
+                    $html .= '<main>';
+                    $html .= '<article itemscope itemtype="http://schema.org/Article">';
                     $html .= '<section class="content" itemprop="articleBody">' . apply_filters('the_content', $post->post_content) . '</section>';
+                    $html .= '</article>';
+                    $html .= '</main>';
+                    $html .= '<footer>';
                     if (!empty($category_names)) {
-                        $html .= '<footer><ul class="categories">';
+                        $html .= '<section class="categories"><h2>Categories</h2><ul>';
                         foreach ($category_names as $cat) {
                             $html .= '<li>' . esc_html($cat) . '</li>';
                         }
-                        $html .= '</ul>';
+                        $html .= '</ul></section>';
                     }
                     if (!empty($tag_names)) {
-                        $html .= '<ul class="tags">';
+                        $html .= '<section class="tags"><h2>Tags</h2><ul>';
                         foreach ($tag_names as $tag) {
                             $html .= '<li>' . esc_html($tag) . '</li>';
                         }
-                        $html .= '</ul>';
+                        $html .= '</ul></section>';
                     }
-                    $html .= '<div class="permalink"><a href="' . esc_url(get_permalink($post->ID)) . '">Permalink</a></div>';
+                    $html .= '<div class="permalink"><a href="' . $permalink . '">Permalink</a></div>';
                     $html .= '</footer>';
-                    $html .= '</article>';
+                    $html .= '</body>';
+                    $html .= '</html>';
 
                     $data[] = $html;
                     $debug_html_outputs[] = $html;
                 }
+
 
                 $python_script = __DIR__ . '/main.py';
                 $max_input_tokens = intval(get_option('fukami_lens_rag_max_input_tokens', 8191));
