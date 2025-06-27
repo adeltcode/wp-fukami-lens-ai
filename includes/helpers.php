@@ -11,7 +11,7 @@
  * @param string $content
  * @return array
  */
-function npa_check_invalid_anchors($content) {
+function fukami_lens_check_invalid_anchors($content) {
     $invalids = [];
     // Match <a ...> tags
     preg_match_all('/<a\s+[^>]*>/i', $content, $matches);
@@ -30,7 +30,7 @@ function npa_check_invalid_anchors($content) {
  * @param string $content
  * @return array
  */
-function npa_check_broken_links($content) {
+function fukami_lens_check_broken_links($content) {
     preg_match_all('/<a\s[^>]*href=["\']([^"\']+)["\']/i', $content, $matches);
     $urls = $matches[1] ?? [];
     $broken = [];

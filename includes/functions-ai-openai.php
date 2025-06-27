@@ -16,7 +16,7 @@
  * @param int $max_tokens
  * @return array|WP_Error
  */
-function npa_call_openai_api($content, $api_key, $model, $system_role_prompt, $temperature = 1, $max_tokens = 1024) {
+function fukami_lens_call_openai_api($content, $api_key, $model, $system_role_prompt, $temperature = 1, $max_tokens = 1024) {
     $body = [
         'model' => $model,
         'messages' => [
@@ -45,7 +45,7 @@ function npa_call_openai_api($content, $api_key, $model, $system_role_prompt, $t
 
     // Prepare result
     return [
-        'result' => $data['choices'][0]['message']['content'] ?? esc_html__('No suggestions found.', 'wp-nihongo-proofreader-ai'),
+        'result' => $data['choices'][0]['message']['content'] ?? esc_html__('No suggestions found.', 'wp-fukami-lens-ai'),
         'prompt_tokens' => $data['usage']['prompt_tokens'] ?? 0,
         'completion_tokens' => $data['usage']['completion_tokens'] ?? 0,
         'total_tokens' => $data['usage']['total_tokens'] ?? 0,

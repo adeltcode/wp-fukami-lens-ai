@@ -1,49 +1,49 @@
 <?php
 /**
- * Core plugin logic and AJAX handlers for Nihongo Proofreader AI
+ * Core plugin logic and AJAX handlers for WP Fukami Lens AI
  *
- * @package NihongoProofreaderAI
+ * @package FukamiLensAI
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! class_exists( 'NPA_Core' ) ) {
+if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
     /**
-     * Class NPA_Core
-     * Handles AJAX and core logic for Nihongo Proofreader AI.
+     * Class FUKAMI_LENS_Core
+     * Handles AJAX and core logic for WP Fukami Lens AI.
      */
-    class NPA_Core {
+    class FUKAMI_LENS_Core {
         public function __construct() {
-            add_action('wp_ajax_npa_check_grammar', [ $this, 'npa_check_grammar_callback' ]);
-            add_action('wp_ajax_npa_ask_ai', [ $this, 'npa_ask_ai_callback' ]);
+            add_action('wp_ajax_fukami_lens_check_grammar', [ $this, 'fukami_lens_check_grammar_callback' ]);
+            add_action('wp_ajax_fukami_lens_ask_ai', [ $this, 'fukami_lens_ask_ai_callback' ]);
         }
 
         /**
          * AJAX handler for grammar checking.
          */
-        public function npa_check_grammar_callback() {
-            check_ajax_referer('npa_check_nonce');
+        public function fukami_lens_check_grammar_callback() {
+            check_ajax_referer('fukami_lens_check_nonce');
 
-            if (!current_user_can('edit_posts')) wp_send_json_error( esc_html__('Unauthorized', 'wp-nihongo-proofreader-ai') );
+            if (!current_user_can('edit_posts')) wp_send_json_error( esc_html__('Unauthorized', 'wp-fukami-lens-ai') );
 
             $content = wp_unslash($_POST['content'] ?? '');
             $title   = wp_unslash($_POST['title'] ?? '');
-            $ai_provider = get_option('npa_ai_provider', 'openai');
-            $model   = get_option('npa_gpt_model', 'gpt-3.5-turbo');
+            $ai_provider = get_option('fukami_lens_ai_provider', 'openai');
+            $model   = get_option('fukami_lens_gpt_model', 'gpt-3.5-turbo');
             $system_role_prompt = get_option(
-                'npa_system_role_prompt',
+                'fukami_lens_system_role_prompt',
                 'あなたは日本語のスペルと文法の校正者です。まずスペルミスを優先的に指摘し修正案を出し、その後に文法ミスを指摘し修正案を出してください。'
             );
-            $temperature = floatval(get_option('npa_temperature', 1));
-            $max_tokens = intval(get_option('npa_max_tokens', 1024));
+            $temperature = floatval(get_option('fukami_lens_temperature', 1));
+            $max_tokens = intval(get_option('fukami_lens_max_tokens', 1024));
 
             // API key selection
             $api_key = $ai_provider === 'anthropic'
-                ? get_option('npa_anthropic_api_key', '')
-                : get_option('npa_openai_api_key', '');
+                ? get_option('fukami_lens_anthropic_api_key', '')
+                : get_option('fukami_lens_openai_api_key', '');
 
             if (!$api_key) {
                 $provider_label = $ai_provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
-                wp_send_json_error( sprintf( esc_html__('API key missing for provider: %s', 'wp-nihongo-proofreader-ai'), esc_html($provider_label) ) );
+                wp_send_json_error( sprintf( esc_html__('API key missing for provider: %s', 'wp-fukami-lens-ai'), esc_html($provider_label) ) );
             }
 
             // Remove all <img ...> tags from the content
@@ -57,16 +57,16 @@ if ( ! class_exists( 'NPA_Core' ) ) {
 
             // Call the selected API
             if ($ai_provider === 'anthropic') {
-                $response = npa_call_anthropic_api($full_content, $api_key, $model, $system_role_prompt, $temperature, $max_tokens);
+                $response = fukami_lens_call_anthropic_api($full_content, $api_key, $model, $system_role_prompt, $temperature, $max_tokens);
             } else {
-                $response = npa_call_openai_api($full_content, $api_key, $model, $system_role_prompt, $temperature, $max_tokens);
+                $response = fukami_lens_call_openai_api($full_content, $api_key, $model, $system_role_prompt, $temperature, $max_tokens);
             }
 
             // Check for broken links
-            $broken_links = npa_check_broken_links($content);
+            $broken_links = fukami_lens_check_broken_links($content);
 
             // Check for invalid anchor tags
-            $invalid_anchors = npa_check_invalid_anchors($content);
+            $invalid_anchors = fukami_lens_check_invalid_anchors($content);
 
             $end_time = microtime(true);
             $time_spent = $end_time - $start_time;
@@ -84,11 +84,11 @@ if ( ! class_exists( 'NPA_Core' ) ) {
         /**
          * AJAX handler for AI Assistant (RAG) questions.
          */
-        public function npa_ask_ai_callback() {
+        public function fukami_lens_ask_ai_callback() {
             if (!current_user_can('manage_options')) {
                 wp_send_json_error('Permission denied');
             }
-            check_ajax_referer('npa_ask_ai_nonce');
+            check_ajax_referer('fukami_lens_ask_ai_nonce');
 
             $question = trim(stripslashes($_POST['question'] ?? ''));
             if (!$question) {
@@ -100,15 +100,15 @@ if ( ! class_exists( 'NPA_Core' ) ) {
             $end_date   = sanitize_text_field($_POST['end_date']   ?? '');
 
             // Get settings
-            $provider = get_option('npa_ai_provider', 'openai');
-            $use_rag = get_option('npa_rag_enabled', '0') === '1';
-            $rag_context_window = intval(get_option('npa_rag_context_window', 2048));
-            $system_prompt = get_option('npa_system_role_prompt', '');
-            $dashboard_prompt = get_option('npa_dashboard_system_prompt', '');
-            $proof_temp = floatval(get_option('npa_temperature', 1));
-            $proof_tokens = intval(get_option('npa_max_tokens', 1000));
-            $rag_temp = floatval(get_option('npa_rag_temperature', 1));
-            $rag_tokens = intval(get_option('npa_rag_max_tokens', 1000));
+            $provider = get_option('fukami_lens_ai_provider', 'openai');
+            $use_rag = get_option('fukami_lens_rag_enabled', '0') === '1';
+            $rag_context_window = intval(get_option('fukami_lens_rag_context_window', 2048));
+            $system_prompt = get_option('fukami_lens_system_role_prompt', '');
+            $dashboard_prompt = get_option('fukami_lens_dashboard_system_prompt', '');
+            $proof_temp = floatval(get_option('fukami_lens_temperature', 1));
+            $proof_tokens = intval(get_option('fukami_lens_max_tokens', 1000));
+            $rag_temp = floatval(get_option('fukami_lens_rag_temperature', 1));
+            $rag_tokens = intval(get_option('fukami_lens_rag_max_tokens', 1000));
 
             // Check if this is from dashboard widget
             $from_dashboard = isset($_POST['from_dashboard']) && $_POST['from_dashboard'] == '1';
@@ -145,8 +145,8 @@ if ( ! class_exists( 'NPA_Core' ) ) {
             // Call AI API (OpenAI example)
             $answer = '';
             if ($provider === 'openai') {
-                $api_key = get_option('npa_openai_api_key', '');
-                $model = get_option('npa_openai_gpt_model', 'gpt-3.5-turbo');
+                $api_key = get_option('fukami_lens_openai_api_key', '');
+                $model = get_option('fukami_lens_openai_gpt_model', 'gpt-3.5-turbo');
                 if (!$api_key) wp_send_json_error('OpenAI API key not set.');
                 $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
                     'headers' => [
@@ -176,6 +176,6 @@ if ( ! class_exists( 'NPA_Core' ) ) {
 }
 
 // Instantiate only once
-if ( ! isset( $GLOBALS['npa_core_instance'] ) ) {
-    $GLOBALS['npa_core_instance'] = new NPA_Core();
+if ( ! isset( $GLOBALS['fukami_lens_core_instance'] ) ) {
+    $GLOBALS['fukami_lens_core_instance'] = new FUKAMI_LENS_Core();
 }

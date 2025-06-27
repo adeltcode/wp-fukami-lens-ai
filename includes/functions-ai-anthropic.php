@@ -16,7 +16,7 @@
  * @param int $max_tokens
  * @return array|WP_Error
  */
-function npa_call_anthropic_api($content, $api_key, $model, $system_role_prompt, $temperature = 1, $max_tokens = 1024) {
+function fukami_lens_call_anthropic_api($content, $api_key, $model, $system_role_prompt, $temperature = 1, $max_tokens = 1024) {
     $body = [
         'model' => $model,
         'max_tokens' => $max_tokens,
@@ -43,7 +43,7 @@ function npa_call_anthropic_api($content, $api_key, $model, $system_role_prompt,
 
     // Prepare result
     return [
-        'result' => $data['content'][0]['text'] ?? esc_html__('No suggestions found.', 'wp-nihongo-proofreader-ai'),
+        'result' => $data['content'][0]['text'] ?? esc_html__('No suggestions found.', 'wp-fukami-lens-ai'),
         'prompt_tokens' => $data['usage']['input_tokens'] ?? 0,
         'completion_tokens' => $data['usage']['output_tokens'] ?? 0,
         'total_tokens' => ($data['usage']['input_tokens'] ?? 0) + ($data['usage']['output_tokens'] ?? 0),

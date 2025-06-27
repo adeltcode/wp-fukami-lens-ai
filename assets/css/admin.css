@@ -1,15 +1,15 @@
-/* Nihongo Proofreader AI - Admin Styles */
+/* WP Fukami Lens AI - Admin Styles */
 
-/* === Namespace: .npa-admin === */
+/* === Namespace: .fukami-lens-admin === */
 
 /* --- Dashboard Widget Styles --- */
-.npa-admin #npa-ask-ai-box-dashboard {
+.fukami-lens-admin #fukami-lens-ask-ai-box-dashboard {
     background: #fff;
     border-radius: 8px;
     margin-bottom: 0;
     font-family: inherit;
 }
-.npa-admin .npa-flex-row {
+.fukami-lens-admin .fukami-lens-flex-row {
     display: flex;
     gap: 8px;
     align-items: center;
@@ -17,30 +17,30 @@
     max-width: 480px;
     width: 100%;
 }
-.npa-admin .npa-flex-row label {
+.fukami-lens-admin .fukami-lens-flex-row label {
     margin-bottom: 0;
     font-weight: 500;
     white-space: nowrap;
     font-size: 14px;
 }
-.npa-admin .npa-date-range {
+.fukami-lens-admin .fukami-lens-date-range {
     display: flex;
     align-items: center;
     gap: 4px;
 }
-.npa-admin .npa-date-range input[type="date"] {
+.fukami-lens-admin .fukami-lens-date-range input[type="date"] {
     width: 120px;
     padding: 3px 6px;
     border-radius: 4px;
     border: 1px solid #ccd0d4;
     font-size: 13px;
 }
-.npa-admin .npa-date-dash {
+.fukami-lens-admin .fukami-lens-date-dash {
     margin: 0 2px;
     font-size: 15px;
     color: #888;
 }
-.npa-admin #npa-ai-question-dashboard {
+.fukami-lens-admin #fukami-lens-ai-question-dashboard {
     width: 100%;
     margin-bottom: 16px;
     border-radius: 4px;
@@ -49,7 +49,7 @@
     font-size: 14px;
     resize: vertical;
 }
-.npa-admin #npa-ai-ask-btn-dashboard {
+.fukami-lens-admin #fukami-lens-ai-ask-btn-dashboard {
     width: 100%;
     min-width: 0;
     height: 38px;
@@ -58,24 +58,24 @@
     margin-top: 10px;
     display: block;
 }
-.npa-admin #npa-ai-answer-dashboard {
+.fukami-lens-admin #fukami-lens-ai-answer-dashboard {
     margin-top: 18px;
     font-size: 15px;
     line-height: 1.6;
 }
 
 /* --- Settings Page Styles --- */
-.npa-admin #npa-ai-tabs { margin-bottom: 0; }
-.npa-admin .npa-tab-btn { margin-right: 8px; padding: 6px 18px; border: none; background: #f9f9f9; cursor: pointer; border-radius: 4px 4px 0 0; position: relative; transform: translateY( 3px); }
-.npa-admin .npa-tab-btn.active { background: #fff; border-bottom: 1px solid #fff; font-weight: bold; transform: translateY(0); }
-.npa-admin .npa-tab-check { margin-left: 6px; vertical-align: middle; transform: translateY( 3px); }
-.npa-admin .npa-tab-btn:not(.active) .npa-tab-check { display: none; }
-.npa-admin .npa-tab-content { display: none; border-top: none; padding: 16px; background: #fff; }
-.npa-admin .npa-tab-content.active { display: block; }
-.npa-admin .npa-other-settings-box { padding: 16px; background: #fff; margin-top: 24px; }
+.fukami-lens-admin #fukami-lens-ai-tabs { margin-bottom: 0; }
+.fukami-lens-admin .fukami-lens-tab-btn { margin-right: 8px; padding: 6px 18px; border: none; background: #f9f9f9; cursor: pointer; border-radius: 4px 4px 0 0; position: relative; transform: translateY( 3px); }
+.fukami-lens-admin .fukami-lens-tab-btn.active { background: #fff; border-bottom: 1px solid #fff; font-weight: bold; transform: translateY(0); }
+.fukami-lens-admin .fukami-lens-tab-check { margin-left: 6px; vertical-align: middle; transform: translateY( 3px); }
+.fukami-lens-admin .fukami-lens-tab-btn:not(.active) .fukami-lens-tab-check { display: none; }
+.fukami-lens-admin .fukami-lens-tab-content { display: none; border-top: none; padding: 16px; background: #fff; }
+.fukami-lens-admin .fukami-lens-tab-content.active { display: block; }
+.fukami-lens-admin .fukami-lens-other-settings-box { padding: 16px; background: #fff; margin-top: 24px; }
 
 /* --- Proofreader/Checker Styles --- */
-.npa-admin #npa-grammar-results {
+.fukami-lens-admin #fukami-lens-grammar-results {
     overflow-y: auto;
     word-break: break-all;
     white-space: pre-wrap;
@@ -84,15 +84,15 @@
     background: #fafafa;
     margin-bottom: 10px;
 }
-.npa-admin .npa-loading {
+.fukami-lens-admin .fukami-lens-loading {
     display: inline-block;
     padding-left: 24px;
     background: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 100 100" fill="gray" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="35" stroke="gray" stroke-width="10" fill="none" stroke-dasharray="164.93361431346415 56.97787143782138"><animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" values="0 50 50;360 50 50" keyTimes="0;1"/></circle></svg>') left center no-repeat;
 }
-.npa-admin .npa-settings-link {
+.fukami-lens-admin .fukami-lens-settings-link {
     text-decoration: none;
 }
-.npa-admin #npa-check-btn-container {
+.fukami-lens-admin #fukami-lens-check-btn-container {
     display: flex;
     align-items: center;
 } 

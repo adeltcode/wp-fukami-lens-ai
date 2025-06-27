@@ -1,29 +1,29 @@
 (function($){
     'use strict';
-    window.NPAAdmin = window.NPAAdmin || {};
+    window.FukamiLensAdmin = window.FukamiLensAdmin || {};
 
     /**
      * Grammar Checker (Metabox)
      */
-    NPAAdmin.initChecker = function() {
-        var $wrap = $('.npa-admin');
+    FukamiLensAdmin.initChecker = function() {
+        var $wrap = $('.fukami-lens-admin');
         if (!$wrap.length) return;
-        $wrap.on('click', '#npa-check-btn', function() {
+        $wrap.on('click', '#fukami-lens-check-btn', function() {
             var $btn = $(this);
-            var $results = $('#npa-grammar-results');
-            var $tokenUsage = $('#npa-token-usage');
+            var $results = $('#fukami-lens-grammar-results');
+            var $tokenUsage = $('#fukami-lens-token-usage');
             var content = $('#content').val();
             var title = $('#title').val();
-            $results.html('<span class="npa-loading">校正中... しばらくお待ちください。</span>');
+            $results.html('<span class="fukami-lens-loading">校正中... しばらくお待ちください。</span>');
             $btn.prop('disabled', true);
             $.ajax({
-                url: npa_ajax.ajax_url,
+                url: fukami_lens_ajax.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'npa_check_grammar',
+                    action: 'fukami_lens_check_grammar',
                     content: content,
                     title: title,
-                    _wpnonce: npa_ajax.nonce
+                    _wpnonce: fukami_lens_ajax.nonce
                 },
                 success: function(response) {
                     if (response.success) {
@@ -77,38 +77,38 @@
     /**
      * Dashboard Widget (Ask AI)
      */
-    NPAAdmin.initDashboardWidget = function() {
-        var $wrap = $('.npa-admin');
+    FukamiLensAdmin.initDashboardWidget = function() {
+        var $wrap = $('.fukami-lens-admin');
         if (!$wrap.length) return;
         // Set default dates
         var today = new Date();
         var endDate = today.toISOString().slice(0,10);
         var lastMonth = new Date(today.getFullYear(), today.getMonth()-1, today.getDate());
         var startDate = lastMonth.toISOString().slice(0,10);
-        $('#npa-rag-start-date-dashboard').val(startDate);
-        $('#npa-rag-end-date-dashboard').val(endDate);
-        $wrap.on('click', '#npa-ai-ask-btn-dashboard', function() {
-            var question   = $('#npa-ai-question-dashboard').val();
-            var startDate  = $('#npa-rag-start-date-dashboard').val();
-            var endDate    = $('#npa-rag-end-date-dashboard').val();
+        $('#fukami-lens-rag-start-date-dashboard').val(startDate);
+        $('#fukami-lens-rag-end-date-dashboard').val(endDate);
+        $wrap.on('click', '#fukami-lens-ai-ask-btn-dashboard', function() {
+            var question   = $('#fukami-lens-ai-question-dashboard').val();
+            var startDate  = $('#fukami-lens-rag-start-date-dashboard').val();
+            var endDate    = $('#fukami-lens-rag-end-date-dashboard').val();
             if (!question.trim()) {
-                $('#npa-ai-answer-dashboard').html('<span style="color:red;">'+(window.wp && wp.i18n ? wp.i18n.__('質問を入力してください。', 'wp-nihongo-proofreader-ai') : '質問を入力してください。')+'</span>');
+                $('#fukami-lens-ai-answer-dashboard').html('<span style="color:red;">'+(window.wp && wp.i18n ? wp.i18n.__('質問を入力してください。', 'wp-fukami-lens-ai') : '質問を入力してください。')+'</span>');
                 return;
             }
-            $('#npa-ai-answer-dashboard').html('<em>'+(window.wp && wp.i18n ? wp.i18n.__('考え中...', 'wp-nihongo-proofreader-ai') : '考え中...')+'</em>');
-            $.post(npa_ajax.ajax_url, {
-                action:         'npa_ask_ai',
+            $('#fukami-lens-ai-answer-dashboard').html('<em>'+(window.wp && wp.i18n ? wp.i18n.__('考え中...', 'wp-fukami-lens-ai') : '考え中...')+'</em>');
+            $.post(fukami_lens_ajax.ajax_url, {
+                action:         'fukami_lens_ask_ai',
                 question:       question,
                 start_date:     startDate,
                 end_date:       endDate,
                 from_dashboard: 1,
-                _wpnonce: npa_ajax.ask_ai_nonce
+                _wpnonce: fukami_lens_ajax.ask_ai_nonce
             }, function(response) {
                 if (response.success) {
-                    $('#npa-ai-answer-dashboard').html('<strong>'+(window.wp && wp.i18n ? wp.i18n.__('回答：', 'wp-nihongo-proofreader-ai') : '回答：')+'</strong><br>'+response.data.answer);
+                    $('#fukami-lens-ai-answer-dashboard').html('<strong>'+(window.wp && wp.i18n ? wp.i18n.__('回答：', 'wp-fukami-lens-ai') : '回答：')+'</strong><br>'+response.data.answer);
                 } else {
-                    $('#npa-ai-answer-dashboard').html('<span style="color:red;">'
-                        +(response.data?response.data:(window.wp && wp.i18n ? wp.i18n.__('エラー', 'wp-nihongo-proofreader-ai') : 'エラー'))+'</span>');
+                    $('#fukami-lens-ai-answer-dashboard').html('<span style="color:red;">'
+                        +(response.data?response.data:(window.wp && wp.i18n ? wp.i18n.__('エラー', 'wp-fukami-lens-ai') : 'エラー'))+'</span>');
                 }
             });
         });
@@ -117,28 +117,28 @@
     /**
      * Settings Page Tabs
      */
-    NPAAdmin.initSettingsTabs = function() {
-        var $wrap = $('.npa-admin');
+    FukamiLensAdmin.initSettingsTabs = function() {
+        var $wrap = $('.fukami-lens-admin');
         if (!$wrap.length) return;
         // Dynamic AI provider field loading
         function updateProviderFields() {
-            var selected = $wrap.find('input[name="npa_ai_provider"]:checked').val();
+            var selected = $wrap.find('input[name="fukami_lens_ai_provider"]:checked').val();
             $wrap.find('.openai, .anthropic').hide();
             if (selected) {
                 $wrap.find('.' + selected).show();
             }
         }
-        if ($wrap.find('input[name="npa_ai_provider"]').length) {
+        if ($wrap.find('input[name="fukami_lens_ai_provider"]').length) {
             updateProviderFields();
-            $wrap.on('change', 'input[name="npa_ai_provider"]', updateProviderFields);
+            $wrap.on('change', 'input[name="fukami_lens_ai_provider"]', updateProviderFields);
         }
     };
 
     // Init all modules on document ready
     $(function(){
-        NPAAdmin.initChecker();
-        NPAAdmin.initDashboardWidget();
-        NPAAdmin.initSettingsTabs();
+        FukamiLensAdmin.initChecker();
+        FukamiLensAdmin.initDashboardWidget();
+        FukamiLensAdmin.initSettingsTabs();
     });
 
 })(jQuery); 

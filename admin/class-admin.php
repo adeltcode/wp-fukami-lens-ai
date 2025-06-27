@@ -2,17 +2,17 @@
 /**
  * Admin logic: menus, settings, dashboard widgets, metaboxes.
  *
- * @package NihongoProofreaderAI
+ * @package FukamiLensAI
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-if ( ! class_exists( 'NPA_Admin' ) ) {
+if ( ! class_exists( 'FUKAMI_LENS_Admin' ) ) {
     /**
-     * Class NPA_Admin
-     * Handles admin-side hooks and UI for Nihongo Proofreader AI.
+     * Class FUKAMI_LENS_Admin
+     * Handles admin-side hooks and UI for WP Fukami Lens AI.
      */
-    class NPA_Admin {
+    class FUKAMI_LENS_Admin {
         /**
          * Constructor: Hooks admin actions.
          */
@@ -30,21 +30,21 @@ if ( ! class_exists( 'NPA_Admin' ) ) {
             global $typenow;
             // Always enqueue admin.css for plugin admin pages
             wp_enqueue_style(
-                'npa-admin',
+                'fukami-lens-admin',
                 plugins_url( '../assets/css/admin.css', __FILE__ )
             );
             // Always enqueue admin.js for plugin admin pages
             wp_enqueue_script(
-                'npa-admin',
+                'fukami-lens-admin',
                 plugins_url( '../assets/admin.js', __FILE__ ),
                 [ 'jquery' ],
                 null,
                 true
             );
-            wp_localize_script( 'npa-admin', 'npa_ajax', [
+            wp_localize_script( 'fukami-lens-admin', 'fukami_lens_ajax', [
                 'ajax_url' => admin_url( 'admin-ajax.php' ),
-                'nonce'    => wp_create_nonce( 'npa_check_nonce' ),
-                'ask_ai_nonce' => wp_create_nonce( 'npa_ask_ai_nonce' )
+                'nonce'    => wp_create_nonce( 'fukami_lens_check_nonce' ),
+                'ask_ai_nonce' => wp_create_nonce( 'fukami_lens_ask_ai_nonce' )
             ]);
         }
 
@@ -53,8 +53,8 @@ if ( ! class_exists( 'NPA_Admin' ) ) {
          */
         public function add_metabox() {
             add_meta_box(
-                'npa_grammar_checker',
-                esc_html__( 'Nihongo Proofreader AI', 'wp-nihongo-proofreader-ai' ),
+                'fukami_lens_grammar_checker',
+                esc_html__( 'WP Fukami Lens AI', 'wp-fukami-lens-ai' ),
                 [ $this, 'render_metabox' ],
                 null,
                 'normal',
@@ -68,21 +68,21 @@ if ( ! class_exists( 'NPA_Admin' ) ) {
          * @param WP_Post $post The current post object.
          */
         public function render_metabox( $post ) {
-            $settings_url = admin_url('options-general.php?page=npa-settings');
-            $ai_provider = get_option('npa_ai_provider', 'openai');
+            $settings_url = admin_url('options-general.php?page=fukami-lens-settings');
+            $ai_provider = get_option('fukami_lens_ai_provider', 'openai');
             $provider_label = $ai_provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
             ?>
-            <div class="npa-admin">
-                <div id="npa-grammar-results"></div>
+            <div class="fukami-lens-admin">
+                <div id="fukami-lens-grammar-results"></div>
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div id="npa-check-btn-container">
-                        <button type="button" class="button" id="npa-check-btn"><?php esc_html_e('Proofread', 'wp-nihongo-proofreader-ai'); ?></button>
+                    <div id="fukami-lens-check-btn-container">
+                        <button type="button" class="button" id="fukami-lens-check-btn"><?php esc_html_e('Proofread', 'wp-fukami-lens-ai'); ?></button>
                         <span style="margin-left: 12px; color: #666; font-size: 13px;">
-                            <strong><?php esc_html_e('Active:', 'wp-nihongo-proofreader-ai'); ?></strong> <?php echo esc_html($provider_label); ?> API
+                            <strong><?php esc_html_e('Active:', 'wp-fukami-lens-ai'); ?></strong> <?php echo esc_html($provider_label); ?> API
                         </span>
                     </div>
-                    <div id="npa-token-usage"></div>
-                    <a href="<?php echo esc_url($settings_url); ?>" class="npa-settings-link" target="_blank" title="<?php esc_attr_e('Settings', 'wp-nihongo-proofreader-ai'); ?>" style="margin-left: 8px;">
+                    <div id="fukami-lens-token-usage"></div>
+                    <a href="<?php echo esc_url($settings_url); ?>" class="fukami-lens-settings-link" target="_blank" title="<?php esc_attr_e('Settings', 'wp-fukami-lens-ai'); ?>" style="margin-left: 8px;">
                         <span class="dashicons dashicons-admin-generic"></span>
                     </a>
                 </div>
@@ -93,6 +93,6 @@ if ( ! class_exists( 'NPA_Admin' ) ) {
 }
 
 // Instantiate only once
-if ( ! isset( $GLOBALS['npa_admin_instance'] ) ) {
-    $GLOBALS['npa_admin_instance'] = new NPA_Admin();
+if ( ! isset( $GLOBALS['fukami_lens_admin_instance'] ) ) {
+    $GLOBALS['fukami_lens_admin_instance'] = new FUKAMI_LENS_Admin();
 }
