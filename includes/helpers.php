@@ -1,8 +1,8 @@
 <?php
 /**
- * Utility/helper functions for Nihongo Proofreader AI
+ * Utility/helper functions for WP Fukami Lens AI
  *
- * @package NihongoProofreaderAI
+ * @package FukamiLensAI
  */
 
 /**

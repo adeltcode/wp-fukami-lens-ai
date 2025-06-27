@@ -1,8 +1,8 @@
 <?php
 /**
- * OpenAI API call for Nihongo Proofreader AI
+ * OpenAI API call for WP Fukami Lens AI
  *
- * @package NihongoProofreaderAI
+ * @package FukamiLensAI
  */
 
 /**

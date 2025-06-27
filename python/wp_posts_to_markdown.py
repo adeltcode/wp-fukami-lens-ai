@@ -6,7 +6,7 @@ Converts a list of WordPress posts (in JSON format) to Markdown with YAML front 
 - Expects a JSON file as the first argument (from PHP/WordPress), or defaults to 'posts.json'.
 - Uses docling (preferred) or markdownify (fallback) to convert HTML post content to Markdown.
 - Outputs one Markdown document per post, separated by a clear delimiter.
-- Supports token-based chunking for OpenAI models using tiktoken and npa_rag_max_tokens.
+- Supports token-based chunking for OpenAI models using tiktoken and FUKAMI_LENS_RAG_MAX_INPUT_TOKENS.
 
 Usage:
     python3 wp_posts_to_markdown.py /path/to/posts.json
@@ -116,8 +116,8 @@ def main():
     markdown = '\n\n---\n\n'.join(all_md)
 
     # Get max_input_tokens from environment or default
-    max_input_tokens = int(os.environ.get("NPA_RAG_MAX_INPUT_TOKENS", 1000))
-    embeddings_model = os.environ.get("NPA_RAG_EMBEDDINGS_MODEL", "text-embedding-3-small")
+    max_input_tokens = int(os.environ.get("FUKAMI_LENS_RAG_MAX_INPUT_TOKENS", 1000))
+    embeddings_model = os.environ.get("FUKAMI_LENS_RAG_EMBEDDINGS_MODEL", "text-embedding-3-small")
 
     print(f"[DEBUG] max_input_tokens = {max_input_tokens}")
     print(f"[DEBUG] embeddings_model = {embeddings_model}")

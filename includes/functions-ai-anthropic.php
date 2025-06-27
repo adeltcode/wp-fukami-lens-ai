@@ -1,8 +1,8 @@
 <?php
 /**
- * Anthropic API call for Nihongo Proofreader AI
+ * Anthropic API call for WP Fukami Lens AI
  *
- * @package NihongoProofreaderAI
+ * @package FukamiLensAI
  */
 
 /**

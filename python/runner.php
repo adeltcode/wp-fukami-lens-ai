@@ -1,8 +1,8 @@
 <?php
 /**
- * Python code runner logic for Nihongo Proofreader AI
+ * Python code runner logic for WP Fukami Lens AI
  *
- * @package NihongoProofreaderAI
+ * @package FukamiLensAI
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
