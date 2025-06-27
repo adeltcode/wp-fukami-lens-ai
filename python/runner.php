@@ -50,36 +50,63 @@ if (!function_exists('npa_python_runner_page')) {
                 ];
                 $posts = get_posts($args);
                 $data = [];
+                $debug_html_outputs = [];
                 foreach ($posts as $post) {
                     $categories = get_the_category($post->ID);
                     $category_names = array_map(function($cat) { return $cat->name; }, $categories);
                     $tags = get_the_tags($post->ID);
                     $tag_names = $tags ? array_map(function($tag) { return $tag->name; }, $tags) : [];
-                    $data[] = [
-                        'ID'       => $post->ID,
-                        'title'    => ['rendered' => get_the_title($post)],
-                        'date'     => $post->post_date,
-                        'content'  => ['rendered' => apply_filters('the_content', $post->post_content)],
-                        'permalink'=> get_permalink($post->ID),
-                        'categories' => $category_names,
-                        'tags' => $tag_names,
-                    ];
+
+                    // Build semantic HTML for the post
+                    $html = '<article itemscope itemtype="http://schema.org/Article">';
+                    $html .= '<header>';
+                    $html .= '<h1 itemprop="headline">' . esc_html(get_the_title($post)) . '</h1>';
+                    $html .= '<time itemprop="datePublished" datetime="' . esc_attr($post->post_date) . '">' . esc_html($post->post_date) . '</time>';
+                    $html .= '</header>';
+                    $html .= '<section class="content" itemprop="articleBody">' . apply_filters('the_content', $post->post_content) . '</section>';
+                    if (!empty($category_names)) {
+                        $html .= '<footer><ul class="categories">';
+                        foreach ($category_names as $cat) {
+                            $html .= '<li>' . esc_html($cat) . '</li>';
+                        }
+                        $html .= '</ul>';
+                    }
+                    if (!empty($tag_names)) {
+                        $html .= '<ul class="tags">';
+                        foreach ($tag_names as $tag) {
+                            $html .= '<li>' . esc_html($tag) . '</li>';
+                        }
+                        $html .= '</ul>';
+                    }
+                    $html .= '<div class="permalink"><a href="' . esc_url(get_permalink($post->ID)) . '">Permalink</a></div>';
+                    $html .= '</footer>';
+                    $html .= '</article>';
+
+                    $data[] = $html;
+                    $debug_html_outputs[] = $html;
                 }
+
                 $python_script = __DIR__ . '/main.py';
                 $max_input_tokens = intval(get_option('npa_rag_max_input_tokens', 8191));
                 $rag_embeddings_model = get_option('npa_rag_embeddings_model', 'gpt-3.5-turbo');
-                $all_md_output = '';
-                foreach ($data as $post) {
+
+                foreach ($data as $html_content) {
+
+                    // Generate temporary HTML using post data
                     $tmpfile = tempnam(sys_get_temp_dir(), 'npa_post_');
-                    file_put_contents($tmpfile, json_encode([$post], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-                    // Debug: Output the contents of the temp file before calling Python
-                    // echo '<div style="margin-top:16px;"><strong>Temp JSON file for Post ID ' . esc_html($post['ID']) . ':</strong><pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:8px; max-height:400px; overflow:auto;">' . esc_html(file_get_contents($tmpfile)) . '</pre></div>';
-                    $cmd = 'NPA_RAG_MAX_INPUT_TOKENS=' . escapeshellarg($max_input_tokens) . ' NPA_RAG_EMBEDDINGS_MODEL=' . escapeshellarg($rag_embeddings_model) . ' ' . escapeshellcmd('/usr/bin/python3') . ' ' . escapeshellarg($python_script) . ' ' . escapeshellarg($tmpfile) . ' 2>&1';
-                    $md_output = shell_exec($cmd);
-                    unlink($tmpfile);
-                    $all_md_output .= $md_output . "\n\n";
+                    file_put_contents($tmpfile, $html_content);
+
+                    // Set OS environment variables (must be prepended to the Python command, not run separately)
+                    // Run the Python script with environment variables for this process only
+                    $cmd_python_code =
+                        'NPA_RAG_MAX_INPUT_TOKENS=' . escapeshellarg($max_input_tokens) . ' ' .
+                        'NPA_RAG_EMBEDDINGS_MODEL=' . escapeshellarg($rag_embeddings_model) . ' ' .
+                        escapeshellcmd('/usr/bin/python3') . ' ' . escapeshellarg($python_script) . ' ' . escapeshellarg($tmpfile) . ' 2>&1';
+                    $chunking_output = shell_exec($cmd_python_code);
+
+                    echo '<pre>' .$chunking_output . '</pre><br>';
+
                 }
-                echo '<div style="margin-top:16px;"><strong>' . esc_html__('Markdown Output:', 'wp-nihongo-proofreader-ai') . '</strong><pre style="white-space:pre-wrap;">' . esc_html($all_md_output) . '</pre></div>';
             }
             ?>
             <?php if ($error): ?>
