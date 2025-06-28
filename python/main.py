@@ -29,7 +29,7 @@ def main():
             doc_conv = DocumentConverter().convert(source=tmp_html_path)
             doc = doc_conv.document
 
-            print(f"<br><pre>{doc}</pre>")
+            print(f"\n{doc}\n")
             # Output Docling document as JSON for debugging
             # try:
             #     doc_json = doc.export_to_dict() if hasattr(doc, 'export_to_dict') else (doc.to_dict() if hasattr(doc, 'to_dict') else None)

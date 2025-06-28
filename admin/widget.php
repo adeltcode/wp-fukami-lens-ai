@@ -24,12 +24,20 @@ function fukami_lens_render_ask_ai_dashboard_widget() {
                 <input type="date" id="fukami-lens-rag-end-date-dashboard" />
             </span>
         </div>
-        <button type="button"
-                id="fukami-lens-ai-ask-btn-dashboard"
-                class="button button-primary">
-            <?php esc_html_e('サイト内容で回答', 'wp-fukami-lens-ai'); ?>
-        </button>
+        <div class="fukami-lens-button-row">
+            <button type="button"
+                    id="fukami-lens-ai-ask-btn-dashboard"
+                    class="button button-primary">
+                <?php esc_html_e('サイト内容で回答', 'wp-fukami-lens-ai'); ?>
+            </button>
+            <button type="button"
+                    id="fukami-lens-chunk-posts-btn-dashboard"
+                    class="button">
+                <?php esc_html_e('投稿をチャンク', 'wp-fukami-lens-ai'); ?>
+            </button>
+        </div>
         <div id="fukami-lens-ai-answer-dashboard"></div>
+        <div id="fukami-lens-chunking-results-dashboard" style="display: none;"></div>
     </div>
     <script>
     jQuery(function($){
@@ -63,6 +71,26 @@ function fukami_lens_render_ask_ai_dashboard_widget() {
                     $('#fukami-lens-ai-answer-dashboard').html('<span style="color:red;">'
                         +(response.data?response.data:wp.i18n.__('エラー', 'wp-fukami-lens-ai'))+'</span>');
                 }
+            });
+        });
+
+        $('#fukami-lens-chunk-posts-btn-dashboard').on('click', function() {
+            var $btn = $(this);
+            var $results = $('#fukami-lens-chunking-results-dashboard');
+            
+            $btn.prop('disabled', true).text(wp.i18n.__('チャンク中...', 'wp-fukami-lens-ai'));
+            $results.show().html('<em>'+wp.i18n.__('投稿をチャンク中...', 'wp-fukami-lens-ai')+'</em>');
+            
+            $.post(ajaxurl, {
+                action: 'fukami_lens_chunk_posts',
+                _wpnonce: fukami_lens_ajax.chunk_posts_nonce
+            }, function(response) {
+                if (response.success) {
+                    $results.html('<strong>'+wp.i18n.__('チャンク結果：', 'wp-fukami-lens-ai')+'</strong><br><pre style="max-height: 300px; overflow-y: auto; background: #f9f9f9; padding: 8px; border: 1px solid #ddd;">'+response.data+'</pre>');
+                } else {
+                    $results.html('<span style="color:red;">'+(response.data?response.data:wp.i18n.__('エラー', 'wp-fukami-lens-ai'))+'</span>');
+                }
+                $btn.prop('disabled', false).text(wp.i18n.__('投稿をチャンク', 'wp-fukami-lens-ai'));
             });
         });
     });

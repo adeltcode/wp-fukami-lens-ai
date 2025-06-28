@@ -44,7 +44,8 @@ if ( ! class_exists( 'FUKAMI_LENS_Admin' ) ) {
             wp_localize_script( 'fukami-lens-admin', 'fukami_lens_ajax', [
                 'ajax_url' => admin_url( 'admin-ajax.php' ),
                 'nonce'    => wp_create_nonce( 'fukami_lens_check_nonce' ),
-                'ask_ai_nonce' => wp_create_nonce( 'fukami_lens_ask_ai_nonce' )
+                'ask_ai_nonce' => wp_create_nonce( 'fukami_lens_ask_ai_nonce' ),
+                'chunk_posts_nonce' => wp_create_nonce( 'fukami_lens_chunk_posts_nonce' )
             ]);
         }
 

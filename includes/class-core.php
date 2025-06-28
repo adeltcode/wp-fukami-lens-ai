@@ -15,6 +15,7 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
         public function __construct() {
             add_action('wp_ajax_fukami_lens_check_grammar', [ $this, 'fukami_lens_check_grammar_callback' ]);
             add_action('wp_ajax_fukami_lens_ask_ai', [ $this, 'fukami_lens_ask_ai_callback' ]);
+            add_action('wp_ajax_fukami_lens_chunk_posts', [ $this, 'fukami_lens_chunk_posts_callback' ]);
         }
 
         /**
@@ -171,6 +172,29 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
             // TODO: Add Anthropic support if needed
 
             wp_send_json_success(['answer' => nl2br(esc_html($answer))]);
+        }
+
+        /**
+         * AJAX handler for chunking posts.
+         */
+        public function fukami_lens_chunk_posts_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            try {
+                $chunking_service = new FUKAMI_LENS_Chunking_Service();
+                $result = $chunking_service->get_chunking_results();
+                
+                if ($result['success']) {
+                    wp_send_json_success($result['data']);
+                } else {
+                    wp_send_json_error($result['data']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error('Chunking failed: ' . $e->getMessage());
+            }
         }
     }
 }

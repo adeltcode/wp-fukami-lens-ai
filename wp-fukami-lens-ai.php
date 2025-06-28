@@ -23,6 +23,7 @@ if ( ! defined( 'FUKAMI_LENS_PLUGIN_DIR' ) ) {
 // Core Includes (functionality, helpers, API integrations)
 // -----------------------------------------------------------------------------
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/class-core.php';
+require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/class-chunking-service.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/functions-ai-openai.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/functions-ai-anthropic.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/helpers.php';
@@ -32,6 +33,7 @@ require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/helpers.php';
 // -----------------------------------------------------------------------------
 require_once FUKAMI_LENS_PLUGIN_DIR . 'admin/class-admin.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'admin/settings-page.php';
+require_once FUKAMI_LENS_PLUGIN_DIR . 'admin/post-chunking.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'admin/widget.php';
 
 // -----------------------------------------------------------------------------

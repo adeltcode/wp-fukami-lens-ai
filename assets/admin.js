@@ -112,6 +112,27 @@
                 }
             });
         });
+        
+        // Chunking functionality
+        $wrap.on('click', '#fukami-lens-chunk-posts-btn-dashboard', function() {
+            var $btn = $(this);
+            var $results = $('#fukami-lens-chunking-results-dashboard');
+            
+            $btn.prop('disabled', true).text((window.wp && wp.i18n ? wp.i18n.__('チャンク中...', 'wp-fukami-lens-ai') : 'チャンク中...'));
+            $results.show().html('<em>'+(window.wp && wp.i18n ? wp.i18n.__('投稿をチャンク中...', 'wp-fukami-lens-ai') : '投稿をチャンク中...')+'</em>');
+            
+            $.post(fukami_lens_ajax.ajax_url, {
+                action: 'fukami_lens_chunk_posts',
+                _wpnonce: fukami_lens_ajax.chunk_posts_nonce
+            }, function(response) {
+                if (response.success) {
+                    $results.html('<strong>'+(window.wp && wp.i18n ? wp.i18n.__('チャンク結果：', 'wp-fukami-lens-ai') : 'チャンク結果：')+'</strong><br><pre style="max-height: 300px; overflow-y: auto; background: #f9f9f9; padding: 8px; border: 1px solid #ddd;">'+response.data+'</pre>');
+                } else {
+                    $results.html('<span style="color:red;">'+(response.data?response.data:(window.wp && wp.i18n ? wp.i18n.__('エラー', 'wp-fukami-lens-ai') : 'エラー'))+'</span>');
+                }
+                $btn.prop('disabled', false).text((window.wp && wp.i18n ? wp.i18n.__('投稿をチャンク', 'wp-fukami-lens-ai') : '投稿をチャンク'));
+            });
+        });
     };
 
     /**

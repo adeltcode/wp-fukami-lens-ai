@@ -18,11 +18,18 @@ add_action('admin_menu', function() {
         'fukami_lens_settings_page'
     );
     add_management_page(
-        esc_html__('Run Python Code', 'wp-fukami-lens-ai'),
-        esc_html__('Run Python Code', 'wp-fukami-lens-ai'),
+        esc_html__('Python Code Runner', 'wp-fukami-lens-ai'),
+        esc_html__('Python Runner', 'wp-fukami-lens-ai'),
         'manage_options',
-        'fukami-lens-run-python',
-        'fukami_lens_run_python_page'
+        'fukami-lens-python-runner',
+        'fukami_lens_python_runner_page_wrapper'
+    );
+    add_management_page(
+        esc_html__('Post Chunking', 'wp-fukami-lens-ai'),
+        esc_html__('Post Chunking', 'wp-fukami-lens-ai'),
+        'manage_options',
+        'fukami-lens-post-chunking',
+        'fukami_lens_post_chunking_page_wrapper'
     );
 });
 
@@ -161,9 +168,17 @@ function fukami_lens_settings_page() {
 /**
  * Render the Python code runner page.
  */
-function fukami_lens_run_python_page() {
-    require_once plugin_dir_path(__FILE__) . '../python/runner.php';
+function fukami_lens_python_runner_page_wrapper() {
+    require_once plugin_dir_path(__FILE__) . 'python-runner.php';
     fukami_lens_python_runner_page();
+}
+
+/**
+ * Render the post chunking page.
+ */
+function fukami_lens_post_chunking_page_wrapper() {
+    require_once plugin_dir_path(__FILE__) . 'post-chunking.php';
+    fukami_lens_post_chunking_page();
 }
 
 add_action('admin_init', function() {

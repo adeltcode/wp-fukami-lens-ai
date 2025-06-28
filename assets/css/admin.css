@@ -17,6 +17,18 @@
     max-width: 480px;
     width: 100%;
 }
+.fukami-lens-admin .fukami-lens-button-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.fukami-lens-admin .fukami-lens-button-row .button {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    font-size: 15px;
+    padding: 0 12px;
+}
 .fukami-lens-admin .fukami-lens-flex-row label {
     margin-bottom: 0;
     font-weight: 500;
