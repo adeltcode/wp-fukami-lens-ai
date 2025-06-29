@@ -7,7 +7,27 @@
 
 // Load WordPress if running standalone
 if (!defined('ABSPATH')) {
-    require_once dirname(__DIR__, 4) . '/wp-load.php';
+    // Try multiple possible paths for wp-load.php
+    $possible_paths = [
+        dirname(__DIR__, 4) . '/wp-load.php',  // Standard WordPress structure
+        dirname(__DIR__, 3) . '/wp-load.php',  // Alternative structure
+        dirname(__DIR__, 5) . '/wp-load.php',  // Another alternative
+        '/var/www/wp-load.php',               // Docker container path
+        '/var/www/html/wp-load.php',          // Alternative Docker path
+    ];
+    
+    $wp_loaded = false;
+    foreach ($possible_paths as $path) {
+        if (file_exists($path)) {
+            require_once $path;
+            $wp_loaded = true;
+            break;
+        }
+    }
+    
+    if (!$wp_loaded) {
+        die('Could not find wp-load.php. Please ensure this script is run from within WordPress.');
+    }
 }
 
 // Test the chunking service with date filtering

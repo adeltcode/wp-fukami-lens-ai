@@ -31,6 +31,13 @@ add_action('admin_menu', function() {
         'fukami-lens-post-chunking',
         'fukami_lens_post_chunking_page_wrapper'
     );
+    add_management_page(
+        esc_html__('LanceDB Manager', 'wp-fukami-lens-ai'),
+        esc_html__('LanceDB Manager', 'wp-fukami-lens-ai'),
+        'manage_options',
+        'fukami-lens-lancedb-manager',
+        'fukami_lens_lancedb_manager_page_wrapper'
+    );
 });
 
 /**
@@ -179,6 +186,14 @@ function fukami_lens_python_runner_page_wrapper() {
 function fukami_lens_post_chunking_page_wrapper() {
     require_once plugin_dir_path(__FILE__) . 'post-chunking.php';
     fukami_lens_post_chunking_page();
+}
+
+/**
+ * Render the LanceDB manager page.
+ */
+function fukami_lens_lancedb_manager_page_wrapper() {
+    require_once plugin_dir_path(__FILE__) . 'lancedb-manager.php';
+    fukami_lens_lancedb_manager_page();
 }
 
 add_action('admin_init', function() {

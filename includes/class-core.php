@@ -16,6 +16,9 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
             add_action('wp_ajax_fukami_lens_check_grammar', [ $this, 'fukami_lens_check_grammar_callback' ]);
             add_action('wp_ajax_fukami_lens_ask_ai', [ $this, 'fukami_lens_ask_ai_callback' ]);
             add_action('wp_ajax_fukami_lens_chunk_posts', [ $this, 'fukami_lens_chunk_posts_callback' ]);
+            add_action('wp_ajax_fukami_lens_store_embeddings', [ $this, 'fukami_lens_store_embeddings_callback' ]);
+            add_action('wp_ajax_fukami_lens_search_similar', [ $this, 'fukami_lens_search_similar_callback' ]);
+            add_action('wp_ajax_fukami_lens_get_lancedb_stats', [ $this, 'fukami_lens_get_lancedb_stats_callback' ]);
         }
 
         /**
@@ -207,6 +210,159 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
                 }
             } catch (Exception $e) {
                 wp_send_json_error('Chunking failed: ' . $e->getMessage());
+            }
+        }
+
+        /**
+         * AJAX handler for storing embeddings in LanceDB.
+         */
+        public function fukami_lens_store_embeddings_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            // Get date range parameters if provided
+            $start_date = sanitize_text_field($_POST['start_date'] ?? '');
+            $end_date = sanitize_text_field($_POST['end_date'] ?? '');
+            $post_ids = isset($_POST['post_ids']) ? array_map('intval', $_POST['post_ids']) : [];
+            
+            try {
+                $lancedb_service = new FUKAMI_LENS_LanceDB_Service();
+                
+                if (!empty($post_ids)) {
+                    // Update specific posts
+                    $result = $lancedb_service->update_embeddings($post_ids);
+                } else {
+                    // Get posts based on date range
+                    $chunking_service = new FUKAMI_LENS_Chunking_Service();
+                    $query_args = [];
+                    if (!empty($start_date)) {
+                        $query_args['start_date'] = $start_date;
+                    }
+                    if (!empty($end_date)) {
+                        $query_args['end_date'] = $end_date;
+                    }
+                    
+                    $html_contents = $chunking_service->get_posts_as_html($query_args);
+                    
+                    // Convert HTML to post data
+                    $posts = [];
+                    
+                    foreach ($html_contents as $html_content) {
+                        // Extract post data from HTML (simplified)
+                        preg_match('/<h1[^>]*>([^<]+)<\/h1>/', $html_content, $title_match);
+                        preg_match('/<time[^>]*datetime="([^"]+)"/', $html_content, $date_match);
+                        
+                        $title = $title_match[1] ?? 'Untitled';
+                        $date = $date_match[1] ?? date('Y-m-d');
+                        
+                        $posts[] = [
+                            'id' => count($posts) + 1,
+                            'title' => $title,
+                            'content' => strip_tags($html_content),
+                            'date' => $date,
+                            'permalink' => '#',
+                            'categories' => [],
+                            'tags' => []
+                        ];
+                    }
+                    
+                    if (!empty($posts)) {
+                        // Use the new method that checks for existing embeddings
+                        $result = $lancedb_service->store_embeddings_with_check($posts);
+                    } else {
+                        $result = [
+                            'success' => false,
+                            'data' => 'No posts found to embed'
+                        ];
+                    }
+                }
+                
+                if ($result['success']) {
+                    wp_send_json_success($result['data']);
+                } else {
+                    wp_send_json_error($result['data']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error('Embedding storage failed: ' . $e->getMessage());
+            }
+        }
+
+        /**
+         * AJAX handler for searching similar content using LanceDB.
+         */
+        public function fukami_lens_search_similar_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            $query_text = sanitize_textarea_field($_POST['query_text'] ?? '');
+            $limit = intval($_POST['limit'] ?? 5);
+            $start_date = sanitize_text_field($_POST['start_date'] ?? '');
+            $end_date = sanitize_text_field($_POST['end_date'] ?? '');
+            
+            if (empty($query_text)) {
+                wp_send_json_error('No query text provided');
+            }
+            
+            try {
+                $lancedb_service = new FUKAMI_LENS_LanceDB_Service();
+                
+                // Get embedding for query text
+                $embedding_result = $lancedb_service->get_embedding($query_text);
+                
+                if (!$embedding_result['success']) {
+                    wp_send_json_error('Failed to get query embedding: ' . $embedding_result['data']);
+                }
+                
+                // Prepare filters
+                $filters = [];
+                if (!empty($start_date)) {
+                    $filters['start_date'] = $start_date;
+                }
+                if (!empty($end_date)) {
+                    $filters['end_date'] = $end_date;
+                }
+                
+                // Search for similar content
+                $search_result = $lancedb_service->search_similar(
+                    $embedding_result['data']['embedding'],
+                    $limit,
+                    $filters
+                );
+                
+                if ($search_result['success']) {
+                    wp_send_json_success($search_result['data']);
+                } else {
+                    wp_send_json_error($search_result['data']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error('Search failed: ' . $e->getMessage());
+            }
+        }
+
+        /**
+         * AJAX handler for getting LanceDB statistics.
+         */
+        public function fukami_lens_get_lancedb_stats_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            try {
+                $lancedb_service = new FUKAMI_LENS_LanceDB_Service();
+                $result = $lancedb_service->get_stats();
+                
+                if ($result['success']) {
+                    wp_send_json_success($result['data']);
+                } else {
+                    wp_send_json_error($result['data']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error('Failed to get stats: ' . $e->getMessage());
             }
         }
     }

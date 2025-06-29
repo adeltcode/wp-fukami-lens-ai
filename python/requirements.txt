@@ -2,4 +2,10 @@ docling
 requests
 # docling (if available on PyPI, otherwise use markdownify as a fallback)
 markdownify
-tiktoken 
+tiktoken
+# LanceDB and vector database dependencies
+lancedb
+numpy
+pandas
+pyarrow
+pydantic 

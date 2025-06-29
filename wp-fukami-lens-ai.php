@@ -24,6 +24,7 @@ if ( ! defined( 'FUKAMI_LENS_PLUGIN_DIR' ) ) {
 // -----------------------------------------------------------------------------
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/class-core.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/class-chunking-service.php';
+require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/class-lancedb-service.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/functions-ai-openai.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/functions-ai-anthropic.php';
 require_once FUKAMI_LENS_PLUGIN_DIR . 'includes/helpers.php';
