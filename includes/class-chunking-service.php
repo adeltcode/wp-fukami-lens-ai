@@ -16,16 +16,40 @@ if ( ! class_exists( 'FUKAMI_LENS_Chunking_Service' ) ) {
         /**
          * Get posts and convert them to HTML for chunking.
          *
-         * @param array $args WordPress query arguments
+         * @param array $args WordPress query arguments. Supports:
+         *                    - Standard WordPress query args (numberposts, post_status, orderby, order)
+         *                    - start_date: Filter posts published after this date (YYYY-MM-DD format)
+         *                    - end_date: Filter posts published before this date (YYYY-MM-DD format)
+         *                    - date_query: WordPress date_query array for advanced date filtering
          * @return array Array of HTML content strings
          */
         public function get_posts_as_html($args = []) {
             $default_args = [
-                'numberposts' => 5,
                 'post_status' => 'publish',
                 'orderby'     => 'date',
                 'order'       => 'DESC',
             ];
+            
+            // Handle date range filtering
+            if (!empty($args['start_date']) || !empty($args['end_date'])) {
+                $date_query = [];
+                
+                if (!empty($args['start_date'])) {
+                    $date_query['after'] = $args['start_date'];
+                }
+                
+                if (!empty($args['end_date'])) {
+                    $date_query['before'] = $args['end_date'];
+                }
+                
+                if (!empty($date_query)) {
+                    $date_query['inclusive'] = true; // Include the boundary dates
+                    $args['date_query'] = $date_query;
+                }
+                
+                // Remove the custom date parameters from args to avoid conflicts
+                unset($args['start_date'], $args['end_date']);
+            }
             
             $args = wp_parse_args($args, $default_args);
             $posts = get_posts($args);

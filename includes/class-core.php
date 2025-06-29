@@ -183,9 +183,22 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
             }
             check_ajax_referer('fukami_lens_chunk_posts_nonce');
 
+            // Get date range parameters if provided
+            $start_date = sanitize_text_field($_POST['start_date'] ?? '');
+            $end_date = sanitize_text_field($_POST['end_date'] ?? '');
+            
+            // Build query arguments
+            $query_args = [];
+            if (!empty($start_date)) {
+                $query_args['start_date'] = $start_date;
+            }
+            if (!empty($end_date)) {
+                $query_args['end_date'] = $end_date;
+            }
+
             try {
                 $chunking_service = new FUKAMI_LENS_Chunking_Service();
-                $result = $chunking_service->get_chunking_results();
+                $result = $chunking_service->get_chunking_results($query_args);
                 
                 if ($result['success']) {
                     wp_send_json_success($result['data']);

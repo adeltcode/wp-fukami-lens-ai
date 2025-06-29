@@ -77,12 +77,16 @@ function fukami_lens_render_ask_ai_dashboard_widget() {
         $('#fukami-lens-chunk-posts-btn-dashboard').on('click', function() {
             var $btn = $(this);
             var $results = $('#fukami-lens-chunking-results-dashboard');
+            var startDate = $('#fukami-lens-rag-start-date-dashboard').val();
+            var endDate = $('#fukami-lens-rag-end-date-dashboard').val();
             
             $btn.prop('disabled', true).text(wp.i18n.__('チャンク中...', 'wp-fukami-lens-ai'));
             $results.show().html('<em>'+wp.i18n.__('投稿をチャンク中...', 'wp-fukami-lens-ai')+'</em>');
             
             $.post(ajaxurl, {
                 action: 'fukami_lens_chunk_posts',
+                start_date: startDate,
+                end_date: endDate,
                 _wpnonce: fukami_lens_ajax.chunk_posts_nonce
             }, function(response) {
                 if (response.success) {

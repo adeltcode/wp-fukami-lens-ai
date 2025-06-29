@@ -19,6 +19,7 @@
 }
 .fukami-lens-admin .fukami-lens-button-row {
     display: flex;
+    align-items: center;
     gap: 8px;
     margin-bottom: 16px;
 }
@@ -67,7 +68,6 @@
     height: 38px;
     font-size: 15px;
     padding: 0 12px;
-    margin-top: 10px;
     display: block;
 }
 .fukami-lens-admin #fukami-lens-ai-answer-dashboard {
