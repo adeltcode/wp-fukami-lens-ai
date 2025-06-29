@@ -22,6 +22,9 @@ function fukami_lens_lancedb_manager_page() {
     } elseif ($action === 'test_lancedb') {
         fukami_lens_run_lancedb_test();
         return;
+    } elseif ($action === 'view_database') {
+        fukami_lens_view_database_page();
+        return;
     }
     
     ?>
@@ -107,6 +110,15 @@ function fukami_lens_lancedb_manager_page() {
                 </a>
                 <span style="margin-left: 8px; color: #666;">
                     <?php esc_html_e('Basic LanceDB functionality test', 'wp-fukami-lens-ai'); ?>
+                </span>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <a href="<?php echo admin_url('admin.php?page=fukami-lens-lancedb-manager&action=view_database'); ?>" class="button button-secondary">
+                    <?php esc_html_e('View Database Contents', 'wp-fukami-lens-ai'); ?>
+                </a>
+                <span style="margin-left: 8px; color: #666;">
+                    <?php esc_html_e('Browse and validate stored embeddings with pagination', 'wp-fukami-lens-ai'); ?>
                 </span>
             </div>
             
@@ -587,6 +599,253 @@ function fukami_lens_run_lancedb_test() {
             <h2>LanceDB Integration Test Complete</h2>
             <p>If you can see successful results above, the LanceDB integration is working correctly!</p>
         </div>
+    </div>
+    <?php
+}
+
+/**
+ * View database contents with pagination
+ */
+function fukami_lens_view_database_page() {
+    // Get pagination parameters
+    $page = isset($_GET['db_page']) ? max(1, intval($_GET['db_page'])) : 1;
+    $per_page = 20;
+    $offset = ($page - 1) * $per_page;
+    
+    // Get search/filter parameters
+    $search = sanitize_text_field($_GET['search'] ?? '');
+    $date_filter = sanitize_text_field($_GET['date_filter'] ?? '');
+    
+    ?>
+    <div class="wrap">
+        <h1><?php esc_html_e('LanceDB Database Contents', 'wp-fukami-lens-ai'); ?></h1>
+        <p><a href="<?php echo admin_url('admin.php?page=fukami-lens-lancedb-manager'); ?>" class="button">← Back to LanceDB Manager</a></p>
+        
+        <div style="background: #fff; padding: 20px; border: 1px solid #ddd; margin-top: 20px;">
+            <?php
+            try {
+                $lancedb_service = new FUKAMI_LENS_LanceDB_Service();
+                
+                // Get database statistics first
+                $stats_result = $lancedb_service->get_stats();
+                if (!$stats_result['success'] || !$stats_result['data']['table_exists']) {
+                    echo "<p style='color: orange;'><strong>No database found.</strong> Please store some embeddings first.</p>";
+                    return;
+                }
+                
+                $stats = $stats_result['data'];
+                $total_posts = $stats['total_posts'];
+                $total_pages = ceil($total_posts / $per_page);
+                
+                echo "<div class='database-overview'>";
+                echo "<h2>Database Overview</h2>";
+                echo "<p><strong>Total Posts:</strong> " . number_format($total_posts) . "</p>";
+                echo "<p><strong>Database Size:</strong> " . $stats['db_size_mb'] . " MB</p>";
+                echo "<p><strong>Current Page:</strong> " . $page . " of " . $total_pages . "</p>";
+                echo "</div>";
+                
+                // Search and filter form
+                echo "<div class='search-filter-form'>";
+                echo "<h2>Search & Filter</h2>";
+                echo "<form method='get'>";
+                echo "<input type='hidden' name='page' value='fukami-lens-lancedb-manager'>";
+                echo "<input type='hidden' name='action' value='view_database'>";
+                echo "<input type='hidden' name='db_page' value='1'>"; // Reset to page 1 when searching
+                
+                echo "<div class='form-row'>";
+                echo "<label><strong>Search:</strong></label>";
+                echo "<input type='text' name='search' value='" . esc_attr($search) . "' placeholder='Search in title or content...'>";
+                echo "<label><strong>Date Filter:</strong></label>";
+                echo "<select name='date_filter'>";
+                echo "<option value=''>All dates</option>";
+                echo "<option value='today'" . ($date_filter === 'today' ? ' selected' : '') . ">Today</option>";
+                echo "<option value='week'" . ($date_filter === 'week' ? ' selected' : '') . ">This week</option>";
+                echo "<option value='month'" . ($date_filter === 'month' ? ' selected' : '') . ">This month</option>";
+                echo "<option value='year'" . ($date_filter === 'year' ? ' selected' : '') . ">This year</option>";
+                echo "</select>";
+                echo "<input type='submit' class='button' value='Search'>";
+                echo "<a href='" . admin_url('admin.php?page=fukami-lens-lancedb-manager&action=view_database') . "' class='button'>Clear</a>";
+                echo "</div>";
+                echo "</form>";
+                echo "</div>";
+                
+                // Get paginated data
+                $view_data = [
+                    'db_path' => plugin_dir_path(__FILE__) . '../data/lancedb',
+                    'table_name' => 'wordpress_posts',
+                    'page' => $page,
+                    'per_page' => $per_page,
+                    'search' => $search,
+                    'date_filter' => $date_filter
+                ];
+                
+                // Create temporary JSON file
+                $tmpfile = tempnam(sys_get_temp_dir(), 'fukami_lens_view_db_');
+                file_put_contents($tmpfile, json_encode($view_data));
+                
+                // Run Python script to get paginated data
+                $view_script = plugin_dir_path(__FILE__) . '../python/view_database.py';
+                $cmd = escapeshellcmd('/usr/bin/python3') . ' ' . 
+                       escapeshellarg($view_script) . ' ' . 
+                       escapeshellarg($tmpfile) . ' 2>&1';
+                
+                $output = shell_exec($cmd);
+                unlink($tmpfile);
+                
+                // Parse the JSON output
+                $lines = explode("\n", $output);
+                $json_output = '';
+                foreach ($lines as $line) {
+                    if (strpos($line, '{') === 0) {
+                        $json_output = $line;
+                        break;
+                    }
+                }
+                
+                if ($json_output) {
+                    $result = json_decode($json_output, true);
+                    if ($result && isset($result['success']) && $result['success']) {
+                        $data = $result['data'];
+                        $posts = $data['posts'];
+                        $filtered_total = $data['total_count'];
+                        $filtered_pages = ceil($filtered_total / $per_page);
+                        
+                        echo "<h2>Database Contents</h2>";
+                        echo "<p><strong>Showing:</strong> " . count($posts) . " of " . number_format($filtered_total) . " posts</p>";
+                        
+                        if (!empty($posts)) {
+                            echo "<table class='wp-list-table widefat fixed striped' style='margin-top: 10px;'>";
+                            echo "<thead>";
+                            echo "<tr>";
+                            echo "<th style='width: 60px;'>ID</th>";
+                            echo "<th style='width: 200px;'>Title</th>";
+                            echo "<th style='width: 100px;'>Date</th>";
+                            echo "<th style='width: 150px;'>Categories</th>";
+                            echo "<th style='width: 150px;'>Tags</th>";
+                            echo "<th style='width: 100px;'>Embedding</th>";
+                            echo "<th style='width: 120px;'>Actions</th>";
+                            echo "</tr>";
+                            echo "</thead>";
+                            echo "<tbody>";
+                            
+                            foreach ($posts as $post) {
+                                echo "<tr>";
+                                echo "<td>" . esc_html($post['id']) . "</td>";
+                                echo "<td><strong>" . esc_html($post['title']) . "</strong></td>";
+                                echo "<td>" . esc_html($post['date']) . "</td>";
+                                echo "<td>" . esc_html(implode(', ', $post['categories'])) . "</td>";
+                                echo "<td>" . esc_html(implode(', ', $post['tags'])) . "</td>";
+                                echo "<td>" . (isset($post['embedding']) ? count($post['embedding']) . " dim" : "N/A") . "</td>";
+                                echo "<td>";
+                                echo "<button type='button' class='button button-small view-content-btn' data-post-id='" . esc_attr($post['id']) . "'>View</button>";
+                                echo "</td>";
+                                echo "</tr>";
+                                
+                                // Hidden content row
+                                echo "<tr class='content-row' id='content-" . esc_attr($post['id']) . "' style='display: none;'>";
+                                echo "<td colspan='7'>";
+                                echo "<div class='content-preview'>";
+                                echo "<h4>Content Preview:</h4>";
+                                echo "<p>" . esc_html(substr($post['content'], 0, 500)) . (strlen($post['content']) > 500 ? '...' : '') . "</p>";
+                                echo "<p><strong>Permalink:</strong> <a href='" . esc_url($post['permalink']) . "' target='_blank'>" . esc_html($post['permalink']) . "</a></p>";
+                                if (isset($post['embedding'])) {
+                                    echo "<p><strong>Embedding Dimensions:</strong> " . count($post['embedding']) . "</p>";
+                                    echo "<p><strong>Embedding Preview:</strong> [" . implode(', ', array_slice($post['embedding'], 0, 5)) . "...]</p>";
+                                }
+                                echo "</div>";
+                                echo "</td>";
+                                echo "</tr>";
+                            }
+                            
+                            echo "</tbody>";
+                            echo "</table>";
+                            
+                            // Pagination
+                            if ($filtered_pages > 1) {
+                                echo "<div class='tablenav-pages' style='margin-top: 20px;'>";
+                                echo "<span class='pagination-links'>";
+                                
+                                // Previous page
+                                if ($page > 1) {
+                                    $prev_url = add_query_arg(['db_page' => $page - 1, 'search' => $search, 'date_filter' => $date_filter]);
+                                    echo "<a class='prev-page' href='" . esc_url($prev_url) . "'>&laquo;</a>";
+                                }
+                                
+                                // Page numbers
+                                $start_page = max(1, $page - 2);
+                                $end_page = min($filtered_pages, $page + 2);
+                                
+                                if ($start_page > 1) {
+                                    $first_url = add_query_arg(['db_page' => 1, 'search' => $search, 'date_filter' => $date_filter]);
+                                    echo "<a href='" . esc_url($first_url) . "'>1</a>";
+                                    if ($start_page > 2) {
+                                        echo "<span class='pagination-omission'>…</span>";
+                                    }
+                                }
+                                
+                                for ($i = $start_page; $i <= $end_page; $i++) {
+                                    if ($i == $page) {
+                                        echo "<span class='current'>" . $i . "</span>";
+                                    } else {
+                                        $page_url = add_query_arg(['db_page' => $i, 'search' => $search, 'date_filter' => $date_filter]);
+                                        echo "<a href='" . esc_url($page_url) . "'>" . $i . "</a>";
+                                    }
+                                }
+                                
+                                if ($end_page < $filtered_pages) {
+                                    if ($end_page < $filtered_pages - 1) {
+                                        echo "<span class='pagination-omission'>…</span>";
+                                    }
+                                    $last_url = add_query_arg(['db_page' => $filtered_pages, 'search' => $search, 'date_filter' => $date_filter]);
+                                    echo "<a href='" . esc_url($last_url) . "'>" . $filtered_pages . "</a>";
+                                }
+                                
+                                // Next page
+                                if ($page < $filtered_pages) {
+                                    $next_url = add_query_arg(['db_page' => $page + 1, 'search' => $search, 'date_filter' => $date_filter]);
+                                    echo "<a class='next-page' href='" . esc_url($next_url) . "'>&raquo;</a>";
+                                }
+                                
+                                echo "</span>";
+                                echo "</div>";
+                            }
+                            
+                        } else {
+                            echo "<p style='color: orange;'>No posts found matching your criteria.</p>";
+                        }
+                        
+                    } else {
+                        echo "<p style='color: red;'>Error retrieving database contents: " . htmlspecialchars($result['data'] ?? 'Unknown error') . "</p>";
+                    }
+                } else {
+                    echo "<p style='color: red;'>Failed to parse database output.</p>";
+                    echo "<pre>" . htmlspecialchars($output) . "</pre>";
+                }
+                
+            } catch (Exception $e) {
+                echo "<p style='color: red;'>Exception: " . htmlspecialchars($e->getMessage()) . "</p>";
+            }
+            ?>
+        </div>
+        
+        <script>
+        jQuery(function($) {
+            $('.view-content-btn').on('click', function() {
+                var postId = $(this).data('post-id');
+                var contentRow = $('#content-' + postId);
+                
+                if (contentRow.is(':visible')) {
+                    contentRow.hide();
+                    $(this).text('View');
+                } else {
+                    $('.content-row').hide();
+                    $('.view-content-btn').text('View');
+                    contentRow.show();
+                    $(this).text('Hide');
+                }
+            });
+        });
+        </script>
     </div>
     <?php
 } 

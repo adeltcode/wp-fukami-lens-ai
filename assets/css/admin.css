@@ -107,4 +107,103 @@
 .fukami-lens-admin #fukami-lens-check-btn-container {
     display: flex;
     align-items: center;
+}
+
+/* --- Database Viewer Styles --- */
+.fukami-lens-admin .wp-list-table th {
+    font-weight: 600;
+    background: #f9f9f9;
+}
+.fukami-lens-admin .wp-list-table td {
+    vertical-align: top;
+    padding: 8px 10px;
+}
+.fukami-lens-admin .content-row td {
+    padding: 0;
+}
+.fukami-lens-admin .content-row .content-preview {
+    background: #f9f9f9;
+    padding: 15px;
+    border: 1px solid #ddd;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+.fukami-lens-admin .content-row .content-preview h4 {
+    margin-top: 0;
+    color: #333;
+}
+.fukami-lens-admin .content-row .content-preview p {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+.fukami-lens-admin .view-content-btn {
+    min-width: 60px;
+}
+.fukami-lens-admin .tablenav-pages {
+    text-align: center;
+    margin: 20px 0;
+}
+.fukami-lens-admin .pagination-links {
+    display: inline-block;
+}
+.fukami-lens-admin .pagination-links a,
+.fukami-lens-admin .pagination-links span {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 0 2px;
+    border: 1px solid #ddd;
+    text-decoration: none;
+    border-radius: 3px;
+}
+.fukami-lens-admin .pagination-links a:hover {
+    background: #f0f0f0;
+}
+.fukami-lens-admin .pagination-links .current {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+}
+.fukami-lens-admin .pagination-links .prev-page,
+.fukami-lens-admin .pagination-links .next-page {
+    font-weight: bold;
+}
+.fukami-lens-admin .pagination-omission {
+    color: #666;
+    border: none !important;
+    background: none !important;
+}
+.fukami-lens-admin .search-filter-form {
+    background: #f9f9f9;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+.fukami-lens-admin .search-filter-form .form-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.fukami-lens-admin .search-filter-form label {
+    font-weight: 600;
+    margin-right: 5px;
+}
+.fukami-lens-admin .search-filter-form input[type="text"] {
+    width: 300px;
+    max-width: 100%;
+}
+.fukami-lens-admin .search-filter-form select {
+    min-width: 120px;
+}
+.fukami-lens-admin .database-overview {
+    background: #e7f3ff;
+    padding: 15px;
+    border: 1px solid #b3d9ff;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+.fukami-lens-admin .database-overview p {
+    margin: 5px 0;
 } 
