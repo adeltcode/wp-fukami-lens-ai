@@ -21,13 +21,37 @@ if ( ! class_exists( 'FUKAMI_LENS_LanceDB_Service' ) ) {
          * Constructor
          */
         public function __construct() {
-            $this->db_path = plugin_dir_path(__FILE__) . '../data/lancedb';
-            $this->table_name = 'wordpress_posts';
-            $this->python_script_path = plugin_dir_path(__FILE__) . '../python/lancedb_operations.py';
-            
-            // Ensure data directory exists
-            if (!file_exists($this->db_path)) {
-                wp_mkdir_p($this->db_path);
+            try {
+                $this->db_path = plugin_dir_path(__FILE__) . '../data/lancedb';
+                $this->table_name = 'wordpress_posts';
+                $this->python_script_path = plugin_dir_path(__FILE__) . '../python/lancedb_operations.py';
+                
+                // Validate paths
+                if (!is_dir(dirname($this->db_path))) {
+                    throw new Exception('Database directory does not exist: ' . dirname($this->db_path));
+                }
+                
+                if (!file_exists($this->python_script_path)) {
+                    throw new Exception('Python script not found: ' . $this->python_script_path);
+                }
+                
+                // Ensure data directory exists
+                if (!file_exists($this->db_path)) {
+                    $created = wp_mkdir_p($this->db_path);
+                    if (!$created) {
+                        throw new Exception('Failed to create database directory: ' . $this->db_path);
+                    }
+                }
+                
+                // Check if Python is available
+                $python_check = shell_exec('which python3 2>/dev/null');
+                if (empty($python_check)) {
+                    throw new Exception('Python3 is not available on the system');
+                }
+                
+            } catch (Exception $e) {
+                error_log('FUKAMI_LENS_LanceDB_Service constructor error: ' . $e->getMessage());
+                throw $e;
             }
         }
         
@@ -293,39 +317,148 @@ if ( ! class_exists( 'FUKAMI_LENS_LanceDB_Service' ) ) {
          */
         public function check_existing_embeddings($post_ids) {
             try {
+                // Validate input
+                if (!is_array($post_ids)) {
+                    return [
+                        'success' => false,
+                        'data' => 'Post IDs must be an array'
+                    ];
+                }
+                
+                if (empty($post_ids)) {
+                    return [
+                        'success' => true,
+                        'data' => [
+                            'existing_ids' => [],
+                            'missing_ids' => []
+                        ]
+                    ];
+                }
+                
+                // Validate post IDs are integers
+                $valid_post_ids = [];
+                foreach ($post_ids as $id) {
+                    if (is_numeric($id) && $id > 0) {
+                        $valid_post_ids[] = intval($id);
+                    }
+                }
+                
+                if (empty($valid_post_ids)) {
+                    return [
+                        'success' => false,
+                        'data' => 'No valid post IDs provided'
+                    ];
+                }
+                
+                // Limit the number of IDs to prevent memory issues
+                if (count($valid_post_ids) > 1000) {
+                    $valid_post_ids = array_slice($valid_post_ids, 0, 1000);
+                }
+                
                 $check_data = [
-                    'post_ids' => $post_ids,
+                    'post_ids' => $valid_post_ids,
                     'db_path' => $this->db_path,
                     'table_name' => $this->table_name
                 ];
                 
                 // Create temporary JSON file
                 $tmpfile = tempnam(sys_get_temp_dir(), 'fukami_lens_lancedb_check_');
-                file_put_contents($tmpfile, json_encode($check_data));
+                if (!$tmpfile) {
+                    return [
+                        'success' => false,
+                        'data' => 'Failed to create temporary file'
+                    ];
+                }
                 
-                // Run Python script to check existing embeddings
+                $json_data = json_encode($check_data);
+                if ($json_data === false) {
+                    unlink($tmpfile);
+                    return [
+                        'success' => false,
+                        'data' => 'Failed to encode data to JSON'
+                    ];
+                }
+                
+                $written = file_put_contents($tmpfile, $json_data);
+                if ($written === false) {
+                    unlink($tmpfile);
+                    return [
+                        'success' => false,
+                        'data' => 'Failed to write temporary file'
+                    ];
+                }
+                
+                // Run Python script to check existing embeddings with timeout
                 $cmd = escapeshellcmd('/usr/bin/python3') . ' ' . 
                        escapeshellarg($this->python_script_path) . ' ' . 
                        escapeshellarg($tmpfile) . ' check_existing_embeddings 2>&1';
                 
+                // Use timeout command to prevent hanging
+                $cmd = 'timeout 60 ' . $cmd;
+                
                 $output = shell_exec($cmd);
                 
                 // Clean up
-                unlink($tmpfile);
+                if (file_exists($tmpfile)) {
+                    unlink($tmpfile);
+                }
+                
+                // Check if timeout occurred
+                if ($output === null) {
+                    return [
+                        'success' => false,
+                        'data' => 'Operation timed out after 60 seconds'
+                    ];
+                }
+                
+                // Check for shell execution errors
+                if (empty($output)) {
+                    return [
+                        'success' => false,
+                        'data' => 'No output from Python script'
+                    ];
+                }
                 
                 // Parse output
                 $result = json_decode($output, true);
                 
-                if ($result && isset($result['success'])) {
-                    return $result;
-                } else {
+                if ($result === null) {
                     return [
                         'success' => false,
-                        'data' => 'Failed to check existing embeddings: ' . $output
+                        'data' => 'Failed to parse JSON output: ' . substr($output, 0, 200)
                     ];
                 }
                 
+                if (!isset($result['success'])) {
+                    return [
+                        'success' => false,
+                        'data' => 'Invalid response format from Python script'
+                    ];
+                }
+                
+                if (!$result['success']) {
+                    return [
+                        'success' => false,
+                        'data' => 'Python script error: ' . ($result['data'] ?? 'Unknown error')
+                    ];
+                }
+                
+                // Validate response data structure
+                if (!isset($result['data']['existing_ids']) || !isset($result['data']['missing_ids'])) {
+                    return [
+                        'success' => false,
+                        'data' => 'Invalid data structure in Python script response'
+                    ];
+                }
+                
+                return $result;
+                
             } catch (Exception $e) {
+                // Clean up temp file if it exists
+                if (isset($tmpfile) && file_exists($tmpfile)) {
+                    unlink($tmpfile);
+                }
+                
                 return [
                     'success' => false,
                     'data' => 'Exception: ' . $e->getMessage()

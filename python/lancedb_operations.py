@@ -226,13 +226,24 @@ class LanceDBManager:
             
             table = self.db.open_table(self.table_name)
             
-            # Query for existing post IDs
-            existing_ids = []
-            for post_id in post_ids:
-                result = table.search().where(f"id = {post_id}").limit(1).to_pandas()
-                if not result.empty:
-                    existing_ids.append(post_id)
+            # Use a single query to get all existing post IDs
+            if not post_ids:
+                return {
+                    'success': True,
+                    'data': {
+                        'existing_ids': [],
+                        'missing_ids': []
+                    }
+                }
             
+            # Build query for all post IDs at once
+            id_conditions = " OR ".join([f"id = {pid}" for pid in post_ids])
+            results = table.search().where(f"({id_conditions})").to_pandas()
+            
+            # Extract existing IDs from results
+            existing_ids = results['id'].tolist() if not results.empty else []
+            
+            # Find missing IDs
             missing_ids = [pid for pid in post_ids if pid not in existing_ids]
             
             return {

@@ -90,7 +90,7 @@ if ( ! class_exists( 'FUKAMI_LENS_Chunking_Service' ) ) {
             $html .= '<time itemprop="datePublished" datetime="' . $date . '">' . $date . '</time>';
             $html .= '</header>';
             $html .= '<main>';
-            $html .= '<article itemscope itemtype="http://schema.org/Article">';
+            $html .= '<article itemscope itemtype="http://schema.org/Article" data-post-id="' . $post->ID . '">';
             $html .= '<section class="content" itemprop="articleBody">' . apply_filters('the_content', $post->post_content) . '</section>';
             $html .= '</article>';
             $html .= '</main>';
@@ -176,6 +176,61 @@ if ( ! class_exists( 'FUKAMI_LENS_Chunking_Service' ) ) {
                 return [
                     'success' => true,
                     'data' => $output
+                ];
+            } catch (Exception $e) {
+                return [
+                    'success' => false,
+                    'data' => $e->getMessage()
+                ];
+            }
+        }
+        
+        /**
+         * Get posts count for progress tracking.
+         *
+         * @param array $args WordPress query arguments
+         * @return array Response array with success status and count
+         */
+        public function get_posts_count($args = []) {
+            try {
+                $default_args = [
+                    'post_status' => 'publish',
+                    'orderby'     => 'date',
+                    'order'       => 'DESC',
+                ];
+                
+                // Handle date range filtering
+                if (!empty($args['start_date']) || !empty($args['end_date'])) {
+                    $date_query = [];
+                    
+                    if (!empty($args['start_date'])) {
+                        $date_query['after'] = $args['start_date'];
+                    }
+                    
+                    if (!empty($args['end_date'])) {
+                        $date_query['before'] = $args['end_date'];
+                    }
+                    
+                    if (!empty($date_query)) {
+                        $date_query['inclusive'] = true; // Include the boundary dates
+                        $args['date_query'] = $date_query;
+                    }
+                    
+                    // Remove the custom date parameters from args to avoid conflicts
+                    unset($args['start_date'], $args['end_date']);
+                }
+                
+                $args = wp_parse_args($args, $default_args);
+                $args['numberposts'] = -1; // Get all posts
+                
+                $posts = get_posts($args);
+                $count = count($posts);
+                
+                return [
+                    'success' => true,
+                    'data' => [
+                        'count' => $count
+                    ]
                 ];
             } catch (Exception $e) {
                 return [

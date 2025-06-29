@@ -19,6 +19,9 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
             add_action('wp_ajax_fukami_lens_store_embeddings', [ $this, 'fukami_lens_store_embeddings_callback' ]);
             add_action('wp_ajax_fukami_lens_search_similar', [ $this, 'fukami_lens_search_similar_callback' ]);
             add_action('wp_ajax_fukami_lens_get_lancedb_stats', [ $this, 'fukami_lens_get_lancedb_stats_callback' ]);
+            add_action('wp_ajax_fukami_lens_get_posts_count', [ $this, 'fukami_lens_get_posts_count_callback' ]);
+            add_action('wp_ajax_fukami_lens_check_embeddings_batch', [ $this, 'fukami_lens_check_embeddings_batch_callback' ]);
+            add_action('wp_ajax_fukami_lens_store_embeddings_batch', [ $this, 'fukami_lens_store_embeddings_batch_callback' ]);
         }
 
         /**
@@ -244,27 +247,31 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
                         $query_args['end_date'] = $end_date;
                     }
                     
-                    $html_contents = $chunking_service->get_posts_as_html($query_args);
+                    // Get the actual WordPress posts instead of HTML
+                    $query_args['post_status'] = 'publish';
+                    $query_args['orderby'] = 'date';
+                    $query_args['order'] = 'DESC';
+                    $query_args['numberposts'] = -1;
                     
-                    // Convert HTML to post data
+                    $wordpress_posts = get_posts($query_args);
+                    
+                    // Convert WordPress posts to the format expected by LanceDB
                     $posts = [];
                     
-                    foreach ($html_contents as $html_content) {
-                        // Extract post data from HTML (simplified)
-                        preg_match('/<h1[^>]*>([^<]+)<\/h1>/', $html_content, $title_match);
-                        preg_match('/<time[^>]*datetime="([^"]+)"/', $html_content, $date_match);
-                        
-                        $title = $title_match[1] ?? 'Untitled';
-                        $date = $date_match[1] ?? date('Y-m-d');
+                    foreach ($wordpress_posts as $post) {
+                        $categories = get_the_category($post->ID);
+                        $category_names = array_map(function($cat) { return $cat->name; }, $categories);
+                        $tags = get_the_tags($post->ID);
+                        $tag_names = $tags ? array_map(function($tag) { return $tag->name; }, $tags) : [];
                         
                         $posts[] = [
-                            'id' => count($posts) + 1,
-                            'title' => $title,
-                            'content' => strip_tags($html_content),
-                            'date' => $date,
-                            'permalink' => '#',
-                            'categories' => [],
-                            'tags' => []
+                            'id' => $post->ID,
+                            'title' => $post->post_title,
+                            'content' => wp_strip_all_tags($post->post_content),
+                            'date' => $post->post_date,
+                            'permalink' => get_permalink($post->ID),
+                            'categories' => $category_names,
+                            'tags' => $tag_names
                         ];
                     }
                     
@@ -363,6 +370,222 @@ if ( ! class_exists( 'FUKAMI_LENS_Core' ) ) {
                 }
             } catch (Exception $e) {
                 wp_send_json_error('Failed to get stats: ' . $e->getMessage());
+            }
+        }
+
+        public function fukami_lens_get_posts_count_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            $start_date = sanitize_text_field($_POST['start_date'] ?? '');
+            $end_date = sanitize_text_field($_POST['end_date'] ?? '');
+            
+            $query_args = [];
+            if (!empty($start_date)) {
+                $query_args['start_date'] = $start_date;
+            }
+            if (!empty($end_date)) {
+                $query_args['end_date'] = $end_date;
+            }
+
+            try {
+                $chunking_service = new FUKAMI_LENS_Chunking_Service();
+                $result = $chunking_service->get_posts_count($query_args);
+                
+                if ($result['success']) {
+                    wp_send_json_success($result['data']);
+                } else {
+                    wp_send_json_error($result['data']);
+                }
+            } catch (Exception $e) {
+                wp_send_json_error('Failed to get posts count: ' . $e->getMessage());
+            }
+        }
+
+        public function fukami_lens_check_embeddings_batch_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            $start_date = sanitize_text_field($_POST['start_date'] ?? '');
+            $end_date = sanitize_text_field($_POST['end_date'] ?? '');
+            
+            try {
+                // Set memory limit and timeout
+                ini_set('memory_limit', '256M');
+                set_time_limit(120); // 2 minutes timeout
+                
+                // Get posts in the date range with proper date query handling
+                $query_args = [
+                    'post_status' => 'publish',
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                    'numberposts' => -1
+                ];
+                
+                // Handle date range filtering properly
+                if (!empty($start_date) || !empty($end_date)) {
+                    $date_query = [];
+                    
+                    if (!empty($start_date)) {
+                        $date_query['after'] = $start_date;
+                    }
+                    
+                    if (!empty($end_date)) {
+                        $date_query['before'] = $end_date;
+                    }
+                    
+                    if (!empty($date_query)) {
+                        $date_query['inclusive'] = true;
+                        $query_args['date_query'] = $date_query;
+                    }
+                }
+                
+                // Get posts with error handling
+                $wordpress_posts = get_posts($query_args);
+                
+                if (is_wp_error($wordpress_posts)) {
+                    wp_send_json_error('Failed to retrieve posts: ' . $wordpress_posts->get_error_message());
+                }
+                
+                if (!is_array($wordpress_posts)) {
+                    wp_send_json_error('Invalid posts data returned');
+                }
+                
+                // Extract post IDs with validation
+                $post_ids = [];
+                foreach ($wordpress_posts as $post) {
+                    if (is_object($post) && isset($post->ID) && is_numeric($post->ID)) {
+                        $post_ids[] = intval($post->ID);
+                    }
+                }
+                
+                if (empty($post_ids)) {
+                    wp_send_json_success([
+                        'existing_count' => 0,
+                        'missing_count' => 0,
+                        'missing_posts' => []
+                    ]);
+                }
+                
+                // Limit the number of posts to check to prevent memory issues
+                if (count($post_ids) > 1000) {
+                    $post_ids = array_slice($post_ids, 0, 1000);
+                    $wordpress_posts = array_slice($wordpress_posts, 0, 1000);
+                }
+                
+                // Check which posts already have embeddings
+                $lancedb_service = new FUKAMI_LENS_LanceDB_Service();
+                
+                if (!$lancedb_service) {
+                    wp_send_json_error('Failed to initialize LanceDB service');
+                }
+                
+                $check_result = $lancedb_service->check_existing_embeddings($post_ids);
+                
+                if (!$check_result['success']) {
+                    wp_send_json_error('Failed to check existing embeddings: ' . $check_result['data']);
+                }
+                
+                if (!isset($check_result['data']['existing_ids']) || !isset($check_result['data']['missing_ids'])) {
+                    wp_send_json_error('Invalid response from embedding check');
+                }
+                
+                $existing_ids = $check_result['data']['existing_ids'];
+                $missing_ids = $check_result['data']['missing_ids'];
+                
+                // Validate that existing_ids and missing_ids are arrays
+                if (!is_array($existing_ids) || !is_array($missing_ids)) {
+                    wp_send_json_error('Invalid data structure returned from embedding check');
+                }
+                
+                // Get missing posts data with error handling
+                $missing_posts = [];
+                foreach ($wordpress_posts as $post) {
+                    if (!is_object($post) || !isset($post->ID)) {
+                        continue;
+                    }
+                    
+                    if (in_array($post->ID, $missing_ids)) {
+                        try {
+                            $categories = get_the_category($post->ID);
+                            $category_names = is_array($categories) ? array_map(function($cat) { 
+                                return is_object($cat) && isset($cat->name) ? $cat->name : ''; 
+                            }, $categories) : [];
+                            
+                            $tags = get_the_tags($post->ID);
+                            $tag_names = [];
+                            if (is_array($tags)) {
+                                $tag_names = array_map(function($tag) { 
+                                    return is_object($tag) && isset($tag->name) ? $tag->name : ''; 
+                                }, $tags);
+                            }
+                            
+                            $missing_posts[] = [
+                                'id' => intval($post->ID),
+                                'title' => sanitize_text_field($post->post_title ?? ''),
+                                'content' => wp_strip_all_tags($post->post_content ?? ''),
+                                'date' => sanitize_text_field($post->post_date ?? ''),
+                                'permalink' => esc_url_raw(get_permalink($post->ID) ?: ''),
+                                'categories' => array_filter($category_names),
+                                'tags' => array_filter($tag_names)
+                            ];
+                        } catch (Exception $e) {
+                            // Skip this post if there's an error processing it
+                            continue;
+                        }
+                    }
+                }
+                
+                wp_send_json_success([
+                    'existing_count' => count($existing_ids),
+                    'missing_count' => count($missing_ids),
+                    'missing_posts' => $missing_posts
+                ]);
+                
+            } catch (Exception $e) {
+                wp_send_json_error('Failed to check embeddings batch: ' . $e->getMessage());
+            }
+        }
+
+        public function fukami_lens_store_embeddings_batch_callback() {
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error('Permission denied');
+            }
+            check_ajax_referer('fukami_lens_chunk_posts_nonce');
+
+            $posts_data = $_POST['posts'] ?? [];
+            
+            if (empty($posts_data)) {
+                wp_send_json_error('No posts data provided');
+            }
+            
+            try {
+                $lancedb_service = new FUKAMI_LENS_LanceDB_Service();
+                
+                // Store embeddings for the batch
+                $result = $lancedb_service->store_embeddings_with_check($posts_data);
+                
+                if ($result['success']) {
+                    // Extract the number of stored embeddings from the result message
+                    $stored_count = 0;
+                    if (preg_match('/stored (\d+) new embeddings/', $result['data'], $matches)) {
+                        $stored_count = intval($matches[1]);
+                    }
+                    
+                    wp_send_json_success([
+                        'stored_count' => $stored_count,
+                        'message' => $result['data']
+                    ]);
+                } else {
+                    wp_send_json_error($result['data']);
+                }
+                
+            } catch (Exception $e) {
+                wp_send_json_error('Failed to store embeddings batch: ' . $e->getMessage());
             }
         }
     }

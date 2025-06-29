@@ -206,4 +206,83 @@
 }
 .fukami-lens-admin .database-overview p {
     margin: 5px 0;
+}
+
+/* --- Embedding Progress Styles --- */
+.fukami-lens-admin .embedding-progress {
+    background: #f9f9f9;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 16px;
+}
+
+.fukami-lens-admin .embedding-progress h3 {
+    margin-top: 0;
+    color: #333;
+    font-size: 16px;
+}
+
+.fukami-lens-admin .progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px 0;
+    position: relative;
+}
+
+.fukami-lens-admin .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0073aa, #005a87);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 30px;
+}
+
+.fukami-lens-admin .progress-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.fukami-lens-admin .progress-details p {
+    margin: 5px 0;
+    padding: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.fukami-lens-admin .progress-details strong {
+    color: #333;
+}
+
+.fukami-lens-admin .processing-log {
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 10px;
+    margin-top: 15px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.fukami-lens-admin .processing-log p {
+    margin: 3px 0;
+    padding: 2px 0;
+}
+
+.fukami-lens-admin .processing-log p:not(:last-child) {
+    border-bottom: 1px solid #f0f0f0;
 } 

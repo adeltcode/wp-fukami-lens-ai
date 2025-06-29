@@ -105,6 +105,24 @@ function fukami_lens_lancedb_manager_page() {
             </div>
             
             <div style="margin-bottom: 16px;">
+                <a href="<?php echo plugin_dir_url(__FILE__) . '../test-embedding-check-optimized.php'; ?>" class="button button-secondary" target="_blank">
+                    <?php esc_html_e('Test Optimized Embedding Check', 'wp-fukami-lens-ai'); ?>
+                </a>
+                <span style="margin-left: 8px; color: #666;">
+                    <?php esc_html_e('Tests the optimized embedding check performance', 'wp-fukami-lens-ai'); ?>
+                </span>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <a href="<?php echo plugin_dir_url(__FILE__) . '../test-embedding-check-debug.php'; ?>" class="button button-secondary" target="_blank">
+                    <?php esc_html_e('Debug Embedding Check', 'wp-fukami-lens-ai'); ?>
+                </a>
+                <span style="margin-left: 8px; color: #666;">
+                    <?php esc_html_e('Step-by-step debug test for Internal Server Error', 'wp-fukami-lens-ai'); ?>
+                </span>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
                 <a href="<?php echo admin_url('admin.php?page=fukami-lens-lancedb-manager&action=test_lancedb'); ?>" class="button button-secondary">
                     <?php esc_html_e('Test LanceDB Integration', 'wp-fukami-lens-ai'); ?>
                 </a>
@@ -176,22 +194,159 @@ function fukami_lens_lancedb_manager_page() {
             var endDate = $('#fukami-lens-embed-end-date').val();
             
             $btn.prop('disabled', true).text('<?php esc_html_e('Storing...', 'wp-fukami-lens-ai'); ?>');
-            $results.html('<em><?php esc_html_e('Storing embeddings...', 'wp-fukami-lens-ai'); ?></em>');
+            $results.html('<div class="embedding-progress">' +
+                '<h3><?php esc_html_e('Embedding Storage Progress', 'wp-fukami-lens-ai'); ?></h3>' +
+                '<div class="progress-bar">' +
+                '<div class="progress-fill" style="width: 0%;">0%</div>' +
+                '</div>' +
+                '<div class="progress-details">' +
+                '<p><strong><?php esc_html_e('Status:', 'wp-fukami-lens-ai'); ?></strong> <span class="status-text"><?php esc_html_e('Initializing...', 'wp-fukami-lens-ai'); ?></span></p>' +
+                '<p><strong><?php esc_html_e('Posts Found:', 'wp-fukami-lens-ai'); ?></strong> <span class="posts-found">-</span></p>' +
+                '<p><strong><?php esc_html_e('Posts Processed:', 'wp-fukami-lens-ai'); ?></strong> <span class="posts-processed">0</span></p>' +
+                '<p><strong><?php esc_html_e('New Embeddings:', 'wp-fukami-lens-ai'); ?></strong> <span class="new-embeddings">0</span></p>' +
+                '<p><strong><?php esc_html_e('Existing Embeddings:', 'wp-fukami-lens-ai'); ?></strong> <span class="existing-embeddings">0</span></p>' +
+                '</div>' +
+                '<div class="processing-log"></div>' +
+                '</div>');
+            
+            // Start the embedding process
+            processEmbeddings(startDate, endDate, $btn, $results);
+        });
+        
+        // Function to process embeddings with progress tracking
+        function processEmbeddings(startDate, endDate, $btn, $results) {
+            var $progress = $results.find('.embedding-progress');
+            var $statusText = $progress.find('.status-text');
+            var $postsFound = $progress.find('.posts-found');
+            var $postsProcessed = $progress.find('.posts-processed');
+            var $newEmbeddings = $progress.find('.new-embeddings');
+            var $existingEmbeddings = $progress.find('.existing-embeddings');
+            var $processingLog = $progress.find('.processing-log');
+            var $progressFill = $progress.find('.progress-fill');
+            
+            var totalPosts = 0;
+            var processedPosts = 0;
+            var newEmbeddings = 0;
+            var existingEmbeddings = 0;
+            
+            // Step 1: Get posts count
+            $statusText.text('<?php esc_html_e('Finding posts...', 'wp-fukami-lens-ai'); ?>');
             
             $.post(ajaxurl, {
-                action: 'fukami_lens_store_embeddings',
+                action: 'fukami_lens_get_posts_count',
                 start_date: startDate,
                 end_date: endDate,
                 _wpnonce: fukami_lens_ajax.chunk_posts_nonce
             }, function(response) {
                 if (response.success) {
-                    $results.html('<div style="color:green;"><strong><?php esc_html_e('Success:', 'wp-fukami-lens-ai'); ?></strong> ' + response.data + '</div>');
+                    totalPosts = response.data.count;
+                    $postsFound.text(totalPosts);
+                    
+                    if (totalPosts === 0) {
+                        $statusText.text('<?php esc_html_e('No posts found in date range', 'wp-fukami-lens-ai'); ?>');
+                        $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
+                        return;
+                    }
+                    
+                    // Step 2: Check existing embeddings
+                    $statusText.text('<?php esc_html_e('Checking existing embeddings...', 'wp-fukami-lens-ai'); ?>');
+                    $progressFill.css('width', '10%').text('10%');
+                    
+                    $.post(ajaxurl, {
+                        action: 'fukami_lens_check_embeddings_batch',
+                        start_date: startDate,
+                        end_date: endDate,
+                        _wpnonce: fukami_lens_ajax.chunk_posts_nonce
+                    }, function(checkResponse) {
+                        if (checkResponse.success) {
+                            var checkData = checkResponse.data;
+                            existingEmbeddings = checkData.existing_count;
+                            var missingCount = checkData.missing_count;
+                            
+                            $existingEmbeddings.text(existingEmbeddings);
+                            $newEmbeddings.text(missingCount);
+                            
+                            if (missingCount === 0) {
+                                $statusText.text('<?php esc_html_e('All posts already have embeddings!', 'wp-fukami-lens-ai'); ?>');
+                                $progressFill.css('width', '100%').text('100%');
+                                $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
+                                return;
+                            }
+                            
+                            // Step 3: Process missing embeddings in batches
+                            processMissingEmbeddings(checkData.missing_posts, $btn, $progress, $statusText, $progressFill, $postsProcessed, $newEmbeddings, $processingLog);
+                            
+                        } else {
+                            $statusText.text('<?php esc_html_e('Error checking embeddings: ', 'wp-fukami-lens-ai'); ?>' + checkResponse.data);
+                            $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
+                        }
+                    }).fail(function(xhr, status, error) {
+                        $statusText.text('<?php esc_html_e('Request failed: ', 'wp-fukami-lens-ai'); ?>' + error);
+                        $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
+                    }).timeout(45000); // 45 second timeout
+                    
                 } else {
-                    $results.html('<span style="color:red;">' + (response.data ? response.data : '<?php esc_html_e('Error', 'wp-fukami-lens-ai'); ?>') + '</span>');
+                    $statusText.text('<?php esc_html_e('Error finding posts: ', 'wp-fukami-lens-ai'); ?>' + response.data);
+                    $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
                 }
-                $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
             });
-        });
+        }
+        
+        // Function to process missing embeddings in batches
+        function processMissingEmbeddings(missingPosts, $btn, $progress, $statusText, $progressFill, $postsProcessed, $newEmbeddings, $processingLog) {
+            var batchSize = 5; // Process 5 posts at a time
+            var totalMissing = missingPosts.length;
+            var processed = 0;
+            var newEmbeddingsCount = 0;
+            
+            $statusText.text('<?php esc_html_e('Processing embeddings...', 'wp-fukami-lens-ai'); ?>');
+            
+            function processBatch() {
+                var batch = missingPosts.slice(processed, processed + batchSize);
+                if (batch.length === 0) {
+                    // All done
+                    $statusText.text('<?php esc_html_e('Embedding storage completed!', 'wp-fukami-lens-ai'); ?>');
+                    $progressFill.css('width', '100%').text('100%');
+                    $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
+                    return;
+                }
+                
+                // Update progress
+                var progressPercent = Math.round((processed / totalMissing) * 80) + 10; // 10-90% for processing
+                $progressFill.css('width', progressPercent + '%').text(progressPercent + '%');
+                
+                // Log current batch
+                var batchIds = batch.map(function(post) { return post.id; }).join(', ');
+                $processingLog.append('<p><strong><?php esc_html_e('Processing posts:', 'wp-fukami-lens-ai'); ?></strong> ' + batchIds + '</p>');
+                
+                $.post(ajaxurl, {
+                    action: 'fukami_lens_store_embeddings_batch',
+                    posts: batch,
+                    _wpnonce: fukami_lens_ajax.chunk_posts_nonce
+                }, function(response) {
+                    if (response.success) {
+                        processed += batch.length;
+                        newEmbeddingsCount += response.data.stored_count;
+                        
+                        $postsProcessed.text(processed);
+                        $newEmbeddings.text(newEmbeddingsCount);
+                        
+                        $processingLog.append('<p style="color: green;"><strong><?php esc_html_e('✓ Stored:', 'wp-fukami-lens-ai'); ?></strong> ' + response.data.stored_count + ' <?php esc_html_e('embeddings for batch', 'wp-fukami-lens-ai'); ?></p>');
+                        
+                        // Process next batch
+                        setTimeout(processBatch, 1000); // Small delay to show progress
+                        
+                    } else {
+                        $processingLog.append('<p style="color: red;"><strong><?php esc_html_e('✗ Error:', 'wp-fukami-lens-ai'); ?></strong> ' + response.data + '</p>');
+                        $statusText.text('<?php esc_html_e('Error processing batch', 'wp-fukami-lens-ai'); ?>');
+                        $btn.prop('disabled', false).text('<?php esc_html_e('Store Embeddings', 'wp-fukami-lens-ai'); ?>');
+                    }
+                });
+            }
+            
+            // Start processing
+            processBatch();
+        }
         
         // Search similar content
         $('#fukami-lens-search-similar-btn').on('click', function() {
